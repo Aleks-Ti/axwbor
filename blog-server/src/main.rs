@@ -1,5 +1,6 @@
 mod application;
 mod data;
+mod domain;
 mod infrastructure;
 mod presentation;
 
@@ -8,10 +9,13 @@ use std::sync::Arc;
 use actix_cors::Cors;
 use actix_web::middleware::{DefaultHeaders, Logger};
 use actix_web::{App, HttpServer, web};
+use application::auth_service::AuthService;
+use data::user_repository::PostgresUserRepository;
 use infrastructure::config::AppConfig;
 use infrastructure::database::{create_pool, run_migrations};
 use infrastructure::jwt::JwtKeys;
 use infrastructure::logging::init_logging;
+use presentation::http::auth_handlers;
 use presentation::http::help_handlers;
 use reqwest::Client;
 
@@ -27,14 +31,12 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("failed to run migrations");
 
-    // let account_repo = Arc::new(PostgresAccountRepository::new(pool.clone()));
-    // let user_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
+    let user_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
 
-    // let bank_service = BankService::new(Arc::clone(&account_repo));
-    // let auth_service = AuthService::new(
-    //     Arc::clone(&user_repo),
-    //     JwtKeys::new(config.jwt_secret.clone()),
-    // );
+    let auth_service = AuthService::new(
+        Arc::clone(&user_repo),
+        JwtKeys::new(config.jwt_secret.clone()),
+    );
     // let exchange_service = ExchangeService::new(
     //     Arc::new(
     //         Client::builder()
@@ -59,14 +61,12 @@ async fn main() -> std::io::Result<()> {
             )
             .wrap(cors)
             // .app_data(web::Data::new(bank_service.clone()))
-            // .app_data(web::Data::new(auth_service.clone()))
+            .app_data(web::Data::new(auth_service.clone()))
             // .app_data(web::Data::new(exchange_service.clone()))
             .service(
-                web::scope("/api").service(help_handlers::scope()).service(
-                    web::scope("")
-                        // .wrap(JwtAuthMiddleware::new(auth_service.keys().clone()))
-                        .service(help_handlers::scope()),
-                ),
+                web::scope("/api")
+                    .service(help_handlers::scope())
+                    .service(auth_handlers::scope()),
             )
     })
     .bind((config.host.as_str(), config.port))?

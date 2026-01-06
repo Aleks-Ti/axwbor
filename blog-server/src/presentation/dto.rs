@@ -19,3 +19,8 @@ pub struct HealthResponse {
     pub status: &'static str,
     pub timestamp: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize)]
+pub struct TokenResponse {
+    pub access_token: String,
+}
