@@ -66,7 +66,7 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/api")
                     .service(help_handlers::scope())
-                    .service(auth_handlers::scope()),
+                    .service(auth_handlers::scope())
             )
     })
     .bind((config.host.as_str(), config.port))?

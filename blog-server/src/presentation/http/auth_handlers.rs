@@ -2,11 +2,12 @@ use crate::application::auth_service::AuthService;
 use crate::data::user_repository::PostgresUserRepository;
 use crate::domain::error::{AuthError};
 use crate::presentation::dto::{LoginRequest, TokenResponse};
-use actix_web::{HttpResponse, Responder, Scope, post, web};
+use actix_web::{HttpResponse, Responder, Scope, post, get, web};
 
 use tracing;
 pub fn scope() -> Scope {
-    web::scope("auth").service(login)
+    println!("AUTH_REGISTER_SCOPE");
+    web::scope("/auth").service(login).service(test)
 }
 
 #[post("/login")]
@@ -17,4 +18,9 @@ async fn login(
     let jwt = service.login(&payload.username, &payload.password).await?;
     tracing::info!(email = %payload.username, "user logged in");
     Ok(HttpResponse::Ok().json(TokenResponse { access_token: jwt }))
+}
+
+#[get("/test")]
+async fn test() -> impl Responder {
+    "OK"
 }

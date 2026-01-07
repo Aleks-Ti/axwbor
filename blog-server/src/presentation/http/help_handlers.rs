@@ -3,7 +3,7 @@ use actix_web::{HttpResponse, Responder, Scope, web};
 use chrono::Utc;
 
 pub fn scope() -> Scope {
-    web::scope("").route("/health", web::get().to(health))
+    web::scope("/help").route("/health", web::get().to(health))
 }
 
 async fn health() -> impl Responder {

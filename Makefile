@@ -15,3 +15,6 @@ postgres_db:
 				-e POSTGRES_DB=blog_db\
 				-e TZ=GMT-3\
 				-p 5438:5432 -d --rm postgres:17.0-alpine3.19
+
+make start_server:
+	cargo run --bin blog-server
