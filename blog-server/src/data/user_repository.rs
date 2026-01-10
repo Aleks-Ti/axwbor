@@ -1,15 +1,14 @@
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 use tracing;
-use uuid::Uuid;
 
-use crate::domain::{error::AuthError, error::DomainError, user::NewUser, user::User};
+use crate::domain::{error::AuthError, user::NewUser, user::User};
 
 #[async_trait]
 pub trait UserRepository: Send + Sync {
     async fn create(&self, user: NewUser) -> Result<User, AuthError>;
     async fn find_by_email(&self, email: &str) -> Result<Option<User>, AuthError>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, AuthError>;
+    async fn find_by_id(&self, id: i64) -> Result<Option<User>, AuthError>;
 }
 
 #[derive(Clone)]
@@ -86,7 +85,7 @@ impl UserRepository for PostgresUserRepository {
         }))
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, AuthError> {
+    async fn find_by_id(&self, id: i64) -> Result<Option<User>, AuthError> {
         let row = sqlx::query(
             r#"
             SELECT id, email, username, password_hash, created_at

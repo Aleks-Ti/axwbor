@@ -24,7 +24,7 @@ where
         &self.keys
     }
 
-    pub async fn get_user(&self, id: uuid::Uuid) -> Result<User, AuthError> {
+    pub async fn get_user(&self, id: i64) -> Result<User, AuthError> {
         self.repo
             .find_by_id(id)
             .await

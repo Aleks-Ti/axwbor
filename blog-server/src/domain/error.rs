@@ -84,3 +84,60 @@ impl From<DomainError> for AuthError {
         }
     }
 }
+
+#[derive(Debug, Error)]
+pub enum PostError {
+    #[error("validation error: {0}")]
+    Validation(String),
+    #[error("not found: {0}")]
+    NotFound(String),
+    #[error("unauthorized")]
+    Unauthorized,
+    #[error("insufficient funds on account {0}")]
+    InsufficientFunds(i32),
+    #[error("internal server error: {0}")]
+    Internal(String),
+}
+
+impl ResponseError for PostError {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            PostError::Validation(_) => StatusCode::BAD_REQUEST,
+            PostError::NotFound(_) => StatusCode::NOT_FOUND,
+            PostError::Unauthorized => StatusCode::UNAUTHORIZED,
+            PostError::InsufficientFunds(_) => StatusCode::BAD_REQUEST,
+            PostError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
+    fn error_response(&self) -> HttpResponse {
+        let message = self.to_string();
+        let details = match self {
+            PostError::Validation(msg) => Some(json!({ "message": msg })),
+            PostError::NotFound(resource) => Some(json!({ "resource": resource })),
+            PostError::Unauthorized => None,
+            PostError::InsufficientFunds(account) => {
+                Some(json!({ "account_id": account, "reason": "insufficient_funds" }))
+            }
+            PostError::Internal(_) => None,
+        };
+        let body = ErrorBody {
+            error: &message,
+            details,
+        };
+        HttpResponse::build(self.status_code()).json(body)
+    }
+}
+
+impl From<DomainError> for PostError {
+    fn from(value: DomainError) -> Self {
+        match value {
+            DomainError::Unauthorized => PostError::Unauthorized,
+            DomainError::Validation(msg) => PostError::Validation(msg),
+            DomainError::InsufficientFunds(acc) => PostError::InsufficientFunds(acc),
+            DomainError::AccountNotFound(acc) => PostError::NotFound(format!("account {}", acc)),
+            DomainError::UserNotFound(id) => PostError::NotFound(format!("user {}", id)),
+            DomainError::Internal(msg) => PostError::Internal(msg),
+        }
+    }
+}

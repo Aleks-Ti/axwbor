@@ -24,3 +24,10 @@ pub struct HealthResponse {
 pub struct TokenResponse {
     pub access_token: String,
 }
+
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PostRequest {
+    pub title: String,
+    pub content: String,
+}

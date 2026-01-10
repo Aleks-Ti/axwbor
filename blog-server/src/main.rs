@@ -10,13 +10,15 @@ use actix_cors::Cors;
 use actix_web::middleware::{DefaultHeaders, Logger};
 use actix_web::{App, HttpServer, web};
 use application::auth_service::AuthService;
+use application::blog_service::PostService;
+use data::post_repository::PostgresPostRepository;
 use data::user_repository::PostgresUserRepository;
 use infrastructure::config::AppConfig;
 use infrastructure::database::{create_pool, run_migrations};
 use infrastructure::jwt::JwtKeys;
 use infrastructure::logging::init_logging;
-use presentation::http::auth_handlers;
-use presentation::http::help_handlers;
+use presentation::http::{auth_handlers, help_handlers, posts_hendlers};
+use presentation::middleware::{JwtAuthMiddleware, RequestIdMiddleware, TimingMiddleware};
 use reqwest::Client;
 
 #[actix_web::main]
@@ -32,11 +34,13 @@ async fn main() -> std::io::Result<()> {
         .expect("failed to run migrations");
 
     let user_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
+    let post_repo = Arc::new(PostgresPostRepository::new(pool.clone()));
 
     let auth_service = AuthService::new(
         Arc::clone(&user_repo),
         JwtKeys::new(config.jwt_secret.clone()),
     );
+    let post_service = PostService::new(Arc::clone(&post_repo));
     // let exchange_service = ExchangeService::new(
     //     Arc::new(
     //         Client::builder()
@@ -52,6 +56,8 @@ async fn main() -> std::io::Result<()> {
         let cors = build_cors(&config_data);
         App::new()
             .wrap(Logger::default())
+            .wrap(RequestIdMiddleware)
+            .wrap(TimingMiddleware)
             .wrap(
                 DefaultHeaders::new()
                     .add(("X-Content-Type-Options", "nosniff"))
@@ -60,13 +66,16 @@ async fn main() -> std::io::Result<()> {
                     .add(("Cross-Origin-Opener-Policy", "same-origin")),
             )
             .wrap(cors)
-            // .app_data(web::Data::new(bank_service.clone()))
             .app_data(web::Data::new(auth_service.clone()))
-            // .app_data(web::Data::new(exchange_service.clone()))
+            .app_data(web::Data::new(post_service.clone()))
             .service(
                 web::scope("/api")
                     .service(help_handlers::scope())
                     .service(auth_handlers::scope())
+                    .service(
+                        posts_hendlers::scope()
+                            .wrap(JwtAuthMiddleware::new(auth_service.keys().clone())),
+                    ),
             )
     })
     .bind((config.host.as_str(), config.port))?
