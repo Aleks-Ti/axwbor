@@ -5,7 +5,6 @@ use argon2::{
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct JwtKeys {

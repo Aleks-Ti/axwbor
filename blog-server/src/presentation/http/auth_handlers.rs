@@ -2,7 +2,7 @@ use crate::application::auth_service::AuthService;
 use crate::data::user_repository::PostgresUserRepository;
 use crate::domain::error::AuthError;
 use crate::presentation::dto::{LoginRequest, RegisterRequest, TokenResponse};
-use actix_web::{HttpResponse, Responder, Scope, get, post, web};
+use actix_web::{HttpResponse, Responder, Scope, post, web};
 
 use tracing;
 pub fn scope() -> Scope {

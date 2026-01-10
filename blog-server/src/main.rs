@@ -29,6 +29,7 @@ async fn main() -> std::io::Result<()> {
     let pool = create_pool(&config.database_url)
         .await
         .expect("failed to connect to database");
+
     run_migrations(&pool)
         .await
         .expect("failed to run migrations");
