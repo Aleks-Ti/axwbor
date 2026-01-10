@@ -1,13 +1,12 @@
 use crate::application::auth_service::AuthService;
 use crate::data::user_repository::PostgresUserRepository;
-use crate::domain::error::{AuthError};
-use crate::presentation::dto::{LoginRequest, TokenResponse};
-use actix_web::{HttpResponse, Responder, Scope, post, get, web};
+use crate::domain::error::AuthError;
+use crate::presentation::dto::{LoginRequest, RegisterRequest, TokenResponse};
+use actix_web::{HttpResponse, Responder, Scope, get, post, web};
 
 use tracing;
 pub fn scope() -> Scope {
-    println!("AUTH_REGISTER_SCOPE");
-    web::scope("/auth").service(login).service(test)
+    web::scope("/auth").service(login).service(register)
 }
 
 #[post("/login")]
@@ -20,7 +19,19 @@ async fn login(
     Ok(HttpResponse::Ok().json(TokenResponse { access_token: jwt }))
 }
 
-#[get("/test")]
-async fn test() -> impl Responder {
-    "OK"
+#[post("/register")]
+async fn register(
+    service: web::Data<AuthService<PostgresUserRepository>>,
+    payload: web::Json<RegisterRequest>,
+) -> Result<impl Responder, AuthError> {
+    let user = service
+        .register(payload.email.clone(), payload.username.clone(), payload.password.clone())
+        .await?;
+
+    tracing::info!(user_id = %user.id, email = %user.email, "user registered");
+
+    Ok(HttpResponse::Created().json(serde_json::json!({
+        "user_id": user.id,
+        "email": user.email
+    })))
 }

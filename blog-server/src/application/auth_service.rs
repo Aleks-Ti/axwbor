@@ -3,8 +3,8 @@ use std::sync::Arc;
 use tracing::instrument;
 
 use crate::data::user_repository::UserRepository;
-use crate::domain::{user::User, error::AuthError, error::DomainError};
-use crate::infrastructure::jwt::{hash_password, verify_password, JwtKeys};
+use crate::domain::{error::AuthError, error::DomainError, user::NewUser, user::User};
+use crate::infrastructure::jwt::{JwtKeys, hash_password, verify_password};
 
 #[derive(Clone)]
 pub struct AuthService<R: UserRepository + 'static> {
@@ -23,7 +23,7 @@ where
     pub fn keys(&self) -> &JwtKeys {
         &self.keys
     }
-    
+
     pub async fn get_user(&self, id: uuid::Uuid) -> Result<User, AuthError> {
         self.repo
             .find_by_id(id)
@@ -33,14 +33,20 @@ where
     }
 
     #[instrument(skip(self))]
-    pub async fn register(&self, email: String, password: String) -> Result<User, AuthError> {
+    pub async fn register(
+        &self,
+        email: String,
+        username: String,
+        password: String,
+    ) -> Result<User, AuthError> {
         let hash = hash_password(&password).map_err(|err| AuthError::Internal(err.to_string()))?;
-        let user = User::new(email.to_lowercase(), hash);
+        let user = NewUser::new(email.to_lowercase(), username, hash);
         self.repo.create(user).await.map_err(AuthError::from)
     }
 
     #[instrument(skip(self))]
     pub async fn login(&self, email: &str, password: &str) -> Result<String, AuthError> {
+        tracing::info!("user authenticated");
         let user = self
             .repo
             .find_by_email(&email.to_lowercase())
@@ -53,11 +59,8 @@ where
         if !valid {
             return Err(AuthError::Unauthorized);
         }
-
         self.keys
             .generate_token(user.id)
             .map_err(|err| AuthError::Internal(err.to_string()))
     }
 }
-
-

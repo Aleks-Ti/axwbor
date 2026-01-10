@@ -17,7 +17,7 @@ impl JwtKeys {
         Self { secret }
     }
 
-    pub fn generate_token(&self, user_id: Uuid) -> Result<String, jsonwebtoken::errors::Error> {
+    pub fn generate_token(&self, user_id: i64) -> Result<String, jsonwebtoken::errors::Error> {
         let claims = Claims {
             sub: user_id.to_string(),
             exp: chrono::Utc::now()
