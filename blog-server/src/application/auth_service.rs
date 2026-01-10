@@ -29,7 +29,7 @@ where
             .find_by_id(id)
             .await
             .map_err(AuthError::from)?
-            .ok_or_else(|| AuthError::NotFound(format!("user {}", id)))
+            .ok_or_else(|| AuthError::UserNotFound(format!("user {}", id)))
     }
 
     #[instrument(skip(self))]

@@ -2,19 +2,18 @@ use actix_web::{HttpResponse, ResponseError, http::StatusCode};
 use serde::Serialize;
 use serde_json::json;
 use thiserror::Error;
-use uuid::Uuid;
 
 #[derive(Debug, Error)]
 #[allow(dead_code)]
 pub enum DomainError {
     #[error("validation failed: {0}")]
     Validation(String),
-    #[error("insufficient funds on account {0}")]
-    InsufficientFunds(i32),
+    #[error("user already exists: {0}")]
+    AlreadyExists(i32),
     #[error("account not found: {0}")]
-    AccountNotFound(i32),
+    AccountNotFound(String),
     #[error("user not found: {0}")]
-    UserNotFound(Uuid),
+    NotFound(String),
     #[error("internal error: {0}")]
     Internal(String),
     #[error("unauthorized")]
@@ -26,11 +25,11 @@ pub enum AuthError {
     #[error("validation error: {0}")]
     Validation(String),
     #[error("not found: {0}")]
-    NotFound(String),
+    UserNotFound(String),
     #[error("unauthorized")]
     Unauthorized,
-    #[error("insufficient funds on account {0}")]
-    InsufficientFunds(i32),
+    #[error("user already exists: {0}")]
+    UserAlreadyExists(i32),
     #[error("internal server error: {0}")]
     Internal(String),
 }
@@ -46,9 +45,9 @@ impl ResponseError for AuthError {
     fn status_code(&self) -> StatusCode {
         match self {
             AuthError::Validation(_) => StatusCode::BAD_REQUEST,
-            AuthError::NotFound(_) => StatusCode::NOT_FOUND,
+            AuthError::UserNotFound(_) => StatusCode::NOT_FOUND,
             AuthError::Unauthorized => StatusCode::UNAUTHORIZED,
-            AuthError::InsufficientFunds(_) => StatusCode::BAD_REQUEST,
+            AuthError::UserAlreadyExists(_) => StatusCode::CONFLICT,
             AuthError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -57,10 +56,10 @@ impl ResponseError for AuthError {
         let message = self.to_string();
         let details = match self {
             AuthError::Validation(msg) => Some(json!({ "message": msg })),
-            AuthError::NotFound(resource) => Some(json!({ "resource": resource })),
+            AuthError::UserNotFound(resource) => Some(json!({ "resource": resource })),
             AuthError::Unauthorized => None,
-            AuthError::InsufficientFunds(account) => {
-                Some(json!({ "account_id": account, "reason": "insufficient_funds" }))
+            AuthError::UserAlreadyExists(account) => {
+                Some(json!({ "account": account, "reason": "user_already_exists" }))
             }
             AuthError::Internal(_) => None,
         };
@@ -77,9 +76,11 @@ impl From<DomainError> for AuthError {
         match value {
             DomainError::Unauthorized => AuthError::Unauthorized,
             DomainError::Validation(msg) => AuthError::Validation(msg),
-            DomainError::InsufficientFunds(acc) => AuthError::InsufficientFunds(acc),
-            DomainError::AccountNotFound(acc) => AuthError::NotFound(format!("account {}", acc)),
-            DomainError::UserNotFound(id) => AuthError::NotFound(format!("user {}", id)),
+            DomainError::AlreadyExists(acc) => AuthError::UserAlreadyExists(acc),
+            DomainError::AccountNotFound(acc) => {
+                AuthError::UserNotFound(format!("account {}", acc))
+            }
+            DomainError::NotFound(id) => AuthError::UserNotFound(format!("user {}", id)),
             DomainError::Internal(msg) => AuthError::Internal(msg),
         }
     }
@@ -89,12 +90,12 @@ impl From<DomainError> for AuthError {
 pub enum PostError {
     #[error("validation error: {0}")]
     Validation(String),
-    #[error("not found: {0}")]
-    NotFound(String),
+    #[error("post not found: {0}")]
+    PostNotFound(String),
     #[error("unauthorized")]
     Unauthorized,
-    #[error("insufficient funds on account {0}")]
-    InsufficientFunds(i32),
+    #[error("forbidden")]
+    Forbidden,
     #[error("internal server error: {0}")]
     Internal(String),
 }
@@ -103,9 +104,9 @@ impl ResponseError for PostError {
     fn status_code(&self) -> StatusCode {
         match self {
             PostError::Validation(_) => StatusCode::BAD_REQUEST,
-            PostError::NotFound(_) => StatusCode::NOT_FOUND,
+            PostError::PostNotFound(_) => StatusCode::NOT_FOUND,
             PostError::Unauthorized => StatusCode::UNAUTHORIZED,
-            PostError::InsufficientFunds(_) => StatusCode::BAD_REQUEST,
+            PostError::Forbidden => StatusCode::FORBIDDEN,
             PostError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -114,11 +115,9 @@ impl ResponseError for PostError {
         let message = self.to_string();
         let details = match self {
             PostError::Validation(msg) => Some(json!({ "message": msg })),
-            PostError::NotFound(resource) => Some(json!({ "resource": resource })),
+            PostError::PostNotFound(resource) => Some(json!({ "resource": resource })),
             PostError::Unauthorized => None,
-            PostError::InsufficientFunds(account) => {
-                Some(json!({ "account_id": account, "reason": "insufficient_funds" }))
-            }
+            PostError::Forbidden => None,
             PostError::Internal(_) => None,
         };
         let body = ErrorBody {
@@ -134,10 +133,10 @@ impl From<DomainError> for PostError {
         match value {
             DomainError::Unauthorized => PostError::Unauthorized,
             DomainError::Validation(msg) => PostError::Validation(msg),
-            DomainError::InsufficientFunds(acc) => PostError::InsufficientFunds(acc),
-            DomainError::AccountNotFound(acc) => PostError::NotFound(format!("account {}", acc)),
-            DomainError::UserNotFound(id) => PostError::NotFound(format!("user {}", id)),
+            DomainError::NotFound(acc) => PostError::PostNotFound(acc),
             DomainError::Internal(msg) => PostError::Internal(msg),
+            DomainError::AlreadyExists(_) => PostError::Internal("unexpected error".into()),
+            DomainError::AccountNotFound(_) => PostError::Internal("unexpected error".into()),
         }
     }
 }

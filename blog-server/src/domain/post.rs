@@ -10,18 +10,6 @@ pub struct Post {
     pub created_at: DateTime<Utc>,
 }
 
-impl Post {
-    pub fn new(id: i64, title: String, content: String, author_id: i64) -> Self {
-        Self {
-            id,
-            title,
-            content,
-            author_id,
-            created_at: Utc::now(),
-        }
-    }
-}
-
 pub struct NewPost {
     pub title: String,
     pub content: String,

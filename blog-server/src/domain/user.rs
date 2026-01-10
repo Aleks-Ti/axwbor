@@ -10,18 +10,6 @@ pub struct User {
     pub created_at: DateTime<Utc>,
 }
 
-impl User {
-    pub fn new(id: i64, email: String, username: String, password_hash: String) -> Self {
-        Self {
-            id,
-            email,
-            username,
-            password_hash,
-            created_at: Utc::now(),
-        }
-    }
-}
-
 pub struct NewUser {
     pub username: String,
     pub email: String,

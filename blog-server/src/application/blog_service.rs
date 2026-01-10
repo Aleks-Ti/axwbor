@@ -26,7 +26,6 @@ where
     ) -> Result<Post, PostError> {
         let post = NewPost::new(title, content, author_id);
         let new_post = self.repo.create(post).await.map_err(PostError::from);
-        println!("{:?}", new_post);
         new_post
     }
 
@@ -35,7 +34,7 @@ where
             .find_all()
             .await
             .map_err(PostError::from)?
-            .ok_or_else(|| PostError::NotFound("posts not found".into()))
+            .ok_or_else(|| PostError::PostNotFound("posts not found".into()))
     }
 
     pub async fn get_post(&self, id: i64) -> Result<Post, PostError> {
@@ -43,7 +42,7 @@ where
             .find_by_id(id)
             .await
             .map_err(PostError::from)?
-            .ok_or_else(|| PostError::NotFound(format!("post {} not found", id)))
+            .ok_or_else(|| PostError::PostNotFound(format!("post {} not found", id)))
     }
 
     pub async fn update_post(
@@ -55,17 +54,17 @@ where
     ) -> Result<Post, PostError> {
         let post = self.repo.find_by_id(id).await.map_err(PostError::from)?;
         if post.is_none() {
-            return Err(PostError::NotFound(format!("post {} not found", id)));
+            return Err(PostError::PostNotFound(format!("post {} not found", id)));
         }
         if post.unwrap().author_id != current_user.id {
-            return Err(PostError::Unauthorized);
+            return Err(PostError::Forbidden);
         }
         let post = NewPost::new(title, content, current_user.id);
         self.repo
             .update(id, post)
             .await
             .map_err(PostError::from)?
-            .ok_or_else(|| PostError::NotFound(format!("post {} not found", id)))
+            .ok_or_else(|| PostError::PostNotFound(format!("post {} not found", id)))
     }
 
     pub async fn delete_post(
@@ -75,10 +74,10 @@ where
     ) -> Result<(), PostError> {
         let post = self.repo.find_by_id(id).await.map_err(PostError::from)?;
         if post.is_none() {
-            return Err(PostError::NotFound(format!("post {} not found", id)));
+            return Err(PostError::PostNotFound(format!("post {} not found", id)));
         }
         if post.unwrap().author_id != current_user.id {
-            return Err(PostError::Unauthorized);
+            return Err(PostError::Forbidden);
         }
         let _ = self.repo.delete(id).await.map_err(PostError::from);
         Ok(())
