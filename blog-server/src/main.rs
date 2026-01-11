@@ -1,10 +1,9 @@
+include!(concat!(env!("OUT_DIR"), "/blog.rs"));
 mod application;
 mod data;
 mod domain;
 mod infrastructure;
 mod presentation;
-
-use std::sync::Arc;
 
 use actix_cors::Cors;
 use actix_web::middleware::{DefaultHeaders, Logger};
@@ -19,7 +18,7 @@ use infrastructure::jwt::JwtKeys;
 use infrastructure::logging::init_logging;
 use presentation::http::{auth_handlers, help_handlers, posts_hendlers};
 use presentation::middleware::{JwtAuthMiddleware, RequestIdMiddleware, TimingMiddleware};
-use reqwest::Client;
+use std::sync::Arc;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -37,66 +36,75 @@ async fn main() -> std::io::Result<()> {
     let user_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
     let post_repo = Arc::new(PostgresPostRepository::new(pool.clone()));
 
-    let auth_service = AuthService::new(
+    let auth_service = Arc::new(AuthService::new(
         Arc::clone(&user_repo),
         JwtKeys::new(config.jwt_secret.clone()),
-    );
-    let post_service = PostService::new(Arc::clone(&post_repo));
-    // let exchange_service = ExchangeService::new(
-    //     Arc::new(
-    //         Client::builder()
-    //             .build()
-    //             .expect("failed to build http client"),
-    //     ),
-    //     config.exchange_api_url.clone(),
-    // );
+    ));
+    let post_service = Arc::new(PostService::new(post_repo));
 
-    let config_data = config.clone();
+    // === HTTP-сервер ===
+    let http_config = Arc::new(config.clone());
+    let http_post_service = post_service.clone();
+    let http_auth_service = auth_service.clone();
+    let grpc_post_service = post_service.clone();
+    let grpc_auth_service = auth_service.clone();
 
-    HttpServer::new(move || {
-        let cors = build_cors(&config_data);
+    let http_config_clone = Arc::clone(&http_config);
+    let http_handle = HttpServer::new(move || {
+        let cors = build_cors(&http_config_clone);
         App::new()
             .wrap(Logger::default())
             .wrap(RequestIdMiddleware)
             .wrap(TimingMiddleware)
-            .wrap(
-                DefaultHeaders::new()
-                    .add(("X-Content-Type-Options", "nosniff"))
-                    .add(("Referrer-Policy", "no-referrer"))
-                    .add(("Permissions-Policy", "geolocation=()"))
-                    .add(("Cross-Origin-Opener-Policy", "same-origin")),
-            )
+            .wrap(DefaultHeaders::new().add(("X-Content-Type-Options", "nosniff")))
             .wrap(cors)
-            .app_data(web::Data::new(auth_service.clone()))
-            .app_data(web::Data::new(post_service.clone()))
+            .app_data(web::Data::from(http_auth_service.clone()))
+            .app_data(web::Data::from(http_post_service.clone()))
             .service(
                 web::scope("/api")
                     .service(help_handlers::scope())
                     .service(auth_handlers::scope())
                     .service(
                         posts_hendlers::scope()
-                            .wrap(JwtAuthMiddleware::new(auth_service.keys().clone())),
+                            .wrap(JwtAuthMiddleware::new(http_auth_service.keys().clone())),
                     ),
             )
     })
-    .bind((config.host.as_str(), config.port))?
-    .run()
-    .await
-}
+    .bind((http_config.host.as_str(), http_config.port))?
+    .run();
 
-fn build_cors(config: &AppConfig) -> Cors {
-    let mut cors = Cors::default()
-        .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
-        .allowed_headers(vec![
-            actix_web::http::header::CONTENT_TYPE,
-            actix_web::http::header::AUTHORIZATION,
-        ])
-        .supports_credentials()
-        .max_age(3600);
+    fn build_cors(config: &AppConfig) -> Cors {
+        let mut cors = Cors::default()
+            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+            .allowed_headers(vec![
+                actix_web::http::header::CONTENT_TYPE,
+                actix_web::http::header::AUTHORIZATION,
+            ])
+            .supports_credentials()
+            .max_age(3600);
 
-    for origin in &config.cors_origins {
-        cors = cors.allowed_origin(origin);
+        for origin in &config.cors_origins {
+            cors = cors.allowed_origin(origin);
+        }
+        cors
+    }
+    // === gRPC-сервер ===
+    let grpc_post_service = grpc_post_service.clone();
+    let grpc_addr = format!("{}:{}", config.host, config.grpc_port);
+
+    let grpc_handle = tokio::spawn(async move {
+        let grpc_impl = presentation::grpc::PostGrpcService::new(grpc_post_service);
+        let tonic_svc = crate::post_service_server::PostServiceServer::new(grpc_impl);
+        tonic::transport::Server::builder()
+            .add_service(tonic_svc)
+            .serve(grpc_addr.parse().unwrap())
+            .await
+    });
+
+    tokio::select! {
+        _ = http_handle => {},
+        _ = grpc_handle => {},
     }
 
-    cors
+    Ok(())
 }

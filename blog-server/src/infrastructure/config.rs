@@ -9,6 +9,7 @@ pub struct AppConfig {
     #[serde(default)]
     pub cors_origins: Vec<String>,
     pub exchange_api_url: String,
+    pub grpc_port: u16,
 }
 
 impl AppConfig {
@@ -32,6 +33,10 @@ impl AppConfig {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
+        let grpc_port = std::env::var("GRPC_PORT")
+            .unwrap_or_else(|_| "50051".into())
+            .parse()
+            .map_err(|e| anyhow::anyhow!("invalid PORT: {}", e))?;
 
         Ok(Self {
             host,
@@ -40,6 +45,7 @@ impl AppConfig {
             jwt_secret,
             cors_origins,
             exchange_api_url,
+            grpc_port,
         })
     }
 }
