@@ -71,7 +71,7 @@ async fn update_post(
             id.parse().unwrap(),
             payload.title.clone(),
             payload.content.clone(),
-            user,
+            user.id,
         )
         .await?;
     Ok(HttpResponse::Ok().json(post))
@@ -88,6 +88,6 @@ async fn delete_post(
     if post.author_id != user.id {
         return Err(PostError::Unauthorized);
     }
-    service.delete_post(id.parse().unwrap(), user).await?;
+    service.delete_post(id.parse().unwrap(), user.id).await?;
     Ok(HttpResponse::NoContent().finish())
 }

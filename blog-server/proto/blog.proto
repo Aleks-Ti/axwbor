@@ -21,7 +21,6 @@ message Post {
 message CreatePostRequest {
   string title     = 1;
   string content   = 2;
-  int64  author_id = 3;
 }
 
 message CreatePostResponse {

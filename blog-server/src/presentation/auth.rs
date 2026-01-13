@@ -48,3 +48,14 @@ pub async fn extract_user_from_token(
         email: user.email,
     })
 }
+
+#[derive(Clone, Debug)]
+pub struct JwtIdentity {
+    pub user_id: i64,
+}
+
+pub fn extract_identity_from_token(token: &str, keys: &JwtKeys) -> Result<JwtIdentity, ()> {
+    let claims = keys.verify_token(token).map_err(|_| ())?;
+    let user_id = claims.sub.parse::<i64>().map_err(|_| ())?;
+    Ok(JwtIdentity { user_id })
+}

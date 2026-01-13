@@ -16,7 +16,7 @@ use infrastructure::config::AppConfig;
 use infrastructure::database::{create_pool, run_migrations};
 use infrastructure::jwt::JwtKeys;
 use infrastructure::logging::init_logging;
-use presentation::http::{auth_handlers, help_handlers, posts_hendlers};
+use presentation::http::{auth_handlers, help_handlers, posts_handlers};
 use presentation::middleware::{RequestIdMiddleware, TimingMiddleware};
 use std::sync::Arc;
 
@@ -64,7 +64,7 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/api")
                     .service(help_handlers::scope())
                     .service(auth_handlers::scope())
-                    .service(posts_hendlers::scope(http_auth_service.keys().clone())),
+                    .service(posts_handlers::scope(http_auth_service.keys().clone())),
             )
     })
     .bind((http_config.host.as_str(), http_config.port))?
@@ -87,10 +87,11 @@ async fn main() -> std::io::Result<()> {
     }
     // === gRPC-сервер ===
     let grpc_post_service = grpc_post_service.clone();
+    let grpc_auth_service = grpc_auth_service.clone();
     let grpc_addr = format!("{}:{}", config.host, config.grpc_port);
 
     let grpc_handle = tokio::spawn(async move {
-        let grpc_impl = presentation::grpc::PostGrpcService::new(grpc_post_service);
+        let grpc_impl = presentation::grpc::PostGrpcService::new(grpc_post_service, grpc_auth_service);
         let tonic_svc = crate::post_service_server::PostServiceServer::new(grpc_impl);
         tonic::transport::Server::builder()
             .add_service(tonic_svc)

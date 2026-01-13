@@ -1,8 +1,10 @@
+use crate::application::auth_service::AuthService;
 use crate::application::blog_service::PostService;
 use crate::data::post_repository::PostRepository;
+use crate::data::user_repository::PostgresUserRepository;
 use crate::domain::error::PostError;
-use crate::domain::post::NewPost;
 use crate::post_service_server::PostService as GrpcPostService;
+use crate::presentation::auth::{JwtIdentity, extract_identity_from_token};
 use crate::{
     CreatePostRequest, CreatePostResponse, DeletePostRequest, DeletePostResponse, GetPostRequest,
     GetPostResponse, GetPostsRequest, GetPostsResponse, Post as GrpcPost, UpdatePostRequest,
@@ -16,15 +18,38 @@ pub struct PostGrpcService<R>
 where
     R: PostRepository + 'static,
 {
-    service: Arc<PostService<R>>,
+    post_service: Arc<PostService<R>>,
+    auth_service: Arc<AuthService<PostgresUserRepository>>,
 }
 
 impl<R> PostGrpcService<R>
 where
-    R: crate::data::post_repository::PostRepository + 'static,
+    R: PostRepository + 'static,
 {
-    pub fn new(service: Arc<PostService<R>>) -> Self {
-        Self { service }
+    pub fn new(
+        post_service: Arc<PostService<R>>,
+        auth_service: Arc<AuthService<PostgresUserRepository>>,
+    ) -> Self {
+        Self {
+            post_service,
+            auth_service,
+        }
+    }
+    async fn extract_identity_from_request(
+        &self,
+        request: &Request<impl std::fmt::Debug>,
+    ) -> Result<JwtIdentity, Status> {
+        let auth_header = request
+            .metadata()
+            .get("authorization")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.strip_prefix("Bearer "))
+            .ok_or_else(|| Status::unauthenticated("authorization required"))?;
+
+        let identity = extract_identity_from_token(auth_header, &self.auth_service.keys())
+            .map_err(|_| Status::unauthenticated("invalid token"))?;
+
+        Ok(identity)
     }
 }
 
@@ -37,10 +62,6 @@ fn domain_to_grpc(post: crate::domain::post::Post) -> GrpcPost {
         author_id: post.author_id,
         created_at: post.created_at.to_rfc3339(), // ISO строка
     }
-}
-
-fn grpc_to_domain_new_post(req: &CreatePostRequest) -> NewPost {
-    NewPost::new(req.title.clone(), req.content.clone(), req.author_id)
 }
 
 // Маппинг ошибок
@@ -62,11 +83,17 @@ where
         &self,
         request: Request<CreatePostRequest>,
     ) -> Result<Response<CreatePostResponse>, Status> {
+        let identity = self.extract_identity_from_request(&request).await?;
+
         let req = request.into_inner();
-        let new_post = grpc_to_domain_new_post(&req);
+        let user = self
+            .auth_service
+            .get_user(identity.user_id)
+            .await
+            .map_err(|_| Status::unauthenticated("user not found"))?;
         let post = self
-            .service
-            .create_post(new_post.title, new_post.content, new_post.author_id)
+            .post_service
+            .create_post(req.title, req.content, user.id)
             .await
             .map_err(map_error)?;
         Ok(Response::new(CreatePostResponse {
@@ -78,7 +105,7 @@ where
         &self,
         _request: Request<GetPostsRequest>,
     ) -> Result<Response<GetPostsResponse>, Status> {
-        let posts = self.service.get_posts().await.map_err(map_error)?;
+        let posts = self.post_service.get_posts().await.map_err(map_error)?;
         let grpc_posts = posts.into_iter().map(domain_to_grpc).collect();
         Ok(Response::new(GetPostsResponse { posts: grpc_posts }))
     }
@@ -88,7 +115,7 @@ where
         request: Request<GetPostRequest>,
     ) -> Result<Response<GetPostResponse>, Status> {
         let id = request.into_inner().id;
-        let post = self.service.get_post(id).await.map_err(map_error)?;
+        let post = self.post_service.get_post(id).await.map_err(map_error)?;
         Ok(Response::new(GetPostResponse {
             post: Some(domain_to_grpc(post)),
         }))
@@ -98,14 +125,17 @@ where
         &self,
         request: Request<UpdatePostRequest>,
     ) -> Result<Response<UpdatePostResponse>, Status> {
+        let identity = self.extract_identity_from_request(&request).await?;
+
         let req = request.into_inner();
-        let current_user = crate::presentation::auth::AuthenticatedUser {
-            id: req.author_id,
-            email: "stub@example.com".to_string(), // stub, не используется в update/delete логике кроме проверки id
-        };
+        let user = self
+            .auth_service
+            .get_user(identity.user_id)
+            .await
+            .map_err(|_| Status::unauthenticated("user not found"))?;
         let post = self
-            .service
-            .update_post(req.id, req.title, req.content, current_user)
+            .post_service
+            .update_post(req.id, req.title, req.content, user.id)
             .await
             .map_err(map_error)?;
         Ok(Response::new(UpdatePostResponse {
@@ -117,13 +147,16 @@ where
         &self,
         request: Request<DeletePostRequest>,
     ) -> Result<Response<DeletePostResponse>, Status> {
+        let identity = self.extract_identity_from_request(&request).await?;
+
         let id = request.into_inner().id;
-        let current_user = crate::presentation::auth::AuthenticatedUser {
-            id: 0, // ← проблема! Нужен реальный user_id
-            email: "stub@example.com".to_string(),
-        };
-        self.service
-            .delete_post(id, current_user)
+        let user = self
+            .auth_service
+            .get_user(identity.user_id)
+            .await
+            .map_err(|_| Status::unauthenticated("user not found"))?;
+        self.post_service
+            .delete_post(id, user.id)
             .await
             .map_err(|e| {
                 if matches!(e, PostError::Forbidden) {

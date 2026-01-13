@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::data::post_repository::PostRepository;
 use crate::domain::post::NewPost;
 use crate::domain::{error::PostError, post::Post};
-use crate::presentation::auth::AuthenticatedUser;
 
 #[derive(Clone)]
 pub struct PostService<R: PostRepository + 'static> {
@@ -50,16 +49,16 @@ where
         id: i64,
         title: String,
         content: String,
-        current_user: AuthenticatedUser,
+        current_user_id: i64,
     ) -> Result<Post, PostError> {
         let post = self.repo.find_by_id(id).await.map_err(PostError::from)?;
         if post.is_none() {
             return Err(PostError::PostNotFound(format!("post {} not found", id)));
         }
-        if post.unwrap().author_id != current_user.id {
+        if post.unwrap().author_id != current_user_id {
             return Err(PostError::Forbidden);
         }
-        let post = NewPost::new(title, content, current_user.id);
+        let post = NewPost::new(title, content, current_user_id);
         self.repo
             .update(id, post)
             .await
@@ -67,16 +66,12 @@ where
             .ok_or_else(|| PostError::PostNotFound(format!("post {} not found", id)))
     }
 
-    pub async fn delete_post(
-        &self,
-        id: i64,
-        current_user: AuthenticatedUser,
-    ) -> Result<(), PostError> {
+    pub async fn delete_post(&self, id: i64, current_user_id: i64) -> Result<(), PostError> {
         let post = self.repo.find_by_id(id).await.map_err(PostError::from)?;
         if post.is_none() {
             return Err(PostError::PostNotFound(format!("post {} not found", id)));
         }
-        if post.unwrap().author_id != current_user.id {
+        if post.unwrap().author_id != current_user_id {
             return Err(PostError::Forbidden);
         }
         let _ = self.repo.delete(id).await.map_err(PostError::from);
