@@ -17,7 +17,7 @@ use infrastructure::database::{create_pool, run_migrations};
 use infrastructure::jwt::JwtKeys;
 use infrastructure::logging::init_logging;
 use presentation::http::{auth_handlers, help_handlers, posts_hendlers};
-use presentation::middleware::{JwtAuthMiddleware, RequestIdMiddleware, TimingMiddleware};
+use presentation::middleware::{RequestIdMiddleware, TimingMiddleware};
 use std::sync::Arc;
 
 #[actix_web::main]
@@ -64,10 +64,7 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/api")
                     .service(help_handlers::scope())
                     .service(auth_handlers::scope())
-                    .service(
-                        posts_hendlers::scope()
-                            .wrap(JwtAuthMiddleware::new(http_auth_service.keys().clone())),
-                    ),
+                    .service(posts_hendlers::scope(http_auth_service.keys().clone())),
             )
     })
     .bind((http_config.host.as_str(), http_config.port))?
