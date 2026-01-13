@@ -1,7 +1,7 @@
 use crate::application::auth_service::AuthService;
 use crate::application::blog_service::PostService;
 use crate::data::post_repository::PostRepository;
-use crate::data::user_repository::PostgresUserRepository;
+use crate::data::user_repository::{UserRepository};
 use crate::domain::error::PostError;
 use crate::post_service_server::PostService as GrpcPostService;
 use crate::presentation::auth::{JwtIdentity, extract_identity_from_token};
@@ -14,21 +14,23 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 // Обёртка над PostService для gRPC
-pub struct PostGrpcService<R>
+pub struct PostGrpcService<R, U>
 where
     R: PostRepository + 'static,
+    U: UserRepository + 'static,
 {
     post_service: Arc<PostService<R>>,
-    auth_service: Arc<AuthService<PostgresUserRepository>>,
+    auth_service: Arc<AuthService<U>>,
 }
 
-impl<R> PostGrpcService<R>
+impl<R, U> PostGrpcService<R, U>
 where
     R: PostRepository + 'static,
+    U: UserRepository + 'static,
 {
     pub fn new(
         post_service: Arc<PostService<R>>,
-        auth_service: Arc<AuthService<PostgresUserRepository>>,
+        auth_service: Arc<AuthService<U>>,
     ) -> Self {
         Self {
             post_service,
@@ -75,9 +77,10 @@ fn map_error(e: PostError) -> Status {
 }
 
 #[tonic::async_trait]
-impl<R> GrpcPostService for PostGrpcService<R>
+impl<R, U> GrpcPostService for PostGrpcService<R, U>
 where
     R: crate::data::post_repository::PostRepository + Send + Sync + 'static,
+    U: UserRepository + Send + Sync + 'static,
 {
     async fn create_post(
         &self,

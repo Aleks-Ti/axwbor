@@ -19,8 +19,8 @@ message Post {
 }
 
 message CreatePostRequest {
-  string title     = 1;
-  string content   = 2;
+  string title   = 1;
+  string content = 2;
 }
 
 message CreatePostResponse {

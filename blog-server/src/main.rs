@@ -1,4 +1,5 @@
 include!(concat!(env!("OUT_DIR"), "/blog.rs"));
+include!(concat!(env!("OUT_DIR"), "/auth.rs"));
 mod application;
 mod data;
 mod domain;
@@ -91,10 +92,15 @@ async fn main() -> std::io::Result<()> {
     let grpc_addr = format!("{}:{}", config.host, config.grpc_port);
 
     let grpc_handle = tokio::spawn(async move {
-        let grpc_impl = presentation::grpc::PostGrpcService::new(grpc_post_service, grpc_auth_service);
-        let tonic_svc = crate::post_service_server::PostServiceServer::new(grpc_impl);
+        let post_grpc_impl =
+            presentation::grpc::PostGrpcService::new(grpc_post_service, auth_service);
+        let post_tonic_svc = crate::post_service_server::PostServiceServer::new(post_grpc_impl);
+
+        let auth_grpc_impl = presentation::grpc::AuthGrpcService::new(grpc_auth_service);
+        let auth_tonic_svc = crate::auth_service_server::AuthServiceServer::new(auth_grpc_impl);
         tonic::transport::Server::builder()
-            .add_service(tonic_svc)
+            .add_service(post_tonic_svc)
+            .add_service(auth_tonic_svc)
             .serve(grpc_addr.parse().unwrap())
             .await
     });
