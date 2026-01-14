@@ -8,7 +8,7 @@ use crate::domain::{error::PostError, post::NewPost, post::Post};
 pub trait PostRepository: Send + Sync {
     async fn create(&self, post: NewPost) -> Result<Post, PostError>;
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, PostError>;
-    async fn find_all(&self) -> Result<Option<Vec<Post>>, PostError>;
+    async fn find_all(&self, limit: i32, offset: i32) -> Result<Option<Vec<Post>>, PostError>;
     async fn update(&self, id: i64, post: NewPost) -> Result<Option<Post>, PostError>;
     async fn delete(&self, id: i64) -> Result<Option<Post>, PostError>;
 }
@@ -94,13 +94,16 @@ impl PostRepository for PostgresPostRepository {
         }
     }
 
-    async fn find_all(&self) -> Result<Option<Vec<Post>>, PostError> {
+    async fn find_all(&self, limit: i32, offset: i32) -> Result<Option<Vec<Post>>, PostError> {
         let rows = sqlx::query(
             r#"
             SELECT id, title, content, author_id, created_at
             FROM posts
+            LIMIT $1 OFFSET $2
             "#,
         )
+        .bind(&limit)
+        .bind(&offset)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| {

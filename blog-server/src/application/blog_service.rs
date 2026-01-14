@@ -28,9 +28,9 @@ where
         new_post
     }
 
-    pub async fn get_posts(&self) -> Result<Vec<Post>, PostError> {
+    pub async fn get_posts(&self, limit: i32, offset: i32) -> Result<Vec<Post>, PostError> {
         self.repo
-            .find_all()
+            .find_all(limit, offset)
             .await
             .map_err(PostError::from)?
             .ok_or_else(|| PostError::PostNotFound("posts not found".into()))

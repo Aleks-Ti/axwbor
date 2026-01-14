@@ -1,15 +1,15 @@
 use crate::application::auth_service::AuthService;
 use crate::application::blog_service::PostService;
 use crate::data::post_repository::PostRepository;
-use crate::data::user_repository::{UserRepository};
+use crate::data::user_repository::UserRepository;
 use crate::domain::error::PostError;
-use crate::post_service_server::PostService as GrpcPostService;
-use crate::presentation::auth::{JwtIdentity, extract_identity_from_token};
-use crate::{
+use crate::grpc_blog::post_service_server::PostService as GrpcPostService;
+use crate::grpc_blog::{
     CreatePostRequest, CreatePostResponse, DeletePostRequest, DeletePostResponse, GetPostRequest,
     GetPostResponse, GetPostsRequest, GetPostsResponse, Post as GrpcPost, UpdatePostRequest,
     UpdatePostResponse,
 };
+use crate::presentation::auth::{JwtIdentity, extract_identity_from_token};
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
@@ -28,10 +28,7 @@ where
     R: PostRepository + 'static,
     U: UserRepository + 'static,
 {
-    pub fn new(
-        post_service: Arc<PostService<R>>,
-        auth_service: Arc<AuthService<U>>,
-    ) -> Self {
+    pub fn new(post_service: Arc<PostService<R>>, auth_service: Arc<AuthService<U>>) -> Self {
         Self {
             post_service,
             auth_service,
@@ -106,9 +103,15 @@ where
 
     async fn get_posts(
         &self,
-        _request: Request<GetPostsRequest>,
+        request: Request<GetPostsRequest>,
     ) -> Result<Response<GetPostsResponse>, Status> {
-        let posts = self.post_service.get_posts().await.map_err(map_error)?;
+        let req = request.into_inner();
+        println!("{}{}", req.limit, req.offset);
+        let posts = self
+            .post_service
+            .get_posts(req.limit, req.offset)
+            .await
+            .map_err(map_error)?;
         let grpc_posts = posts.into_iter().map(domain_to_grpc).collect();
         Ok(Response::new(GetPostsResponse { posts: grpc_posts }))
     }

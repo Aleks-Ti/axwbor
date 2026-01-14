@@ -25,9 +25,14 @@ pub struct TokenResponse {
     pub access_token: String,
 }
 
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PostRequest {
     pub title: String,
     pub content: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetPostRequest {
+    pub limit: i32,
+    pub offset: i32,
 }

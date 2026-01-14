@@ -2,7 +2,7 @@ use crate::data::post_repository::PostgresPostRepository;
 use crate::domain::error::PostError;
 use crate::infrastructure::jwt::JwtKeys;
 use crate::presentation::auth::AuthenticatedUser;
-use crate::presentation::dto::PostRequest;
+use crate::presentation::dto::{GetPostRequest, PostRequest};
 use crate::{application::blog_service::PostService, presentation::middleware::JwtAuthMiddleware};
 use actix_web::{HttpResponse, Responder, Scope, delete, get, post, put, web};
 
@@ -30,21 +30,17 @@ async fn create_post(
     println!("{:?}", user);
     let new_post = service
         .create_post(payload.title.clone(), payload.content.clone(), user.id)
-        .await;
-    match new_post {
-        Ok(post) => Ok(HttpResponse::Created().json(PostRequest {
-            title: post.title,
-            content: post.content,
-        })),
-        Err(e) => Err(e),
-    }
+        .await?;
+    Ok(HttpResponse::Created().json(new_post))
 }
 
 #[get("")]
 async fn get_posts(
     service: web::Data<PostService<PostgresPostRepository>>,
+    filter: web::Query<GetPostRequest>,
 ) -> Result<impl Responder, PostError> {
-    let posts = service.get_posts().await?;
+    println!("{:?}", filter);
+    let posts = service.get_posts(filter.limit, filter.offset).await?;
     Ok(HttpResponse::Ok().json(posts))
 }
 

@@ -1,8 +1,8 @@
 use crate::application::auth_service::AuthService;
-use crate::auth_service_server::AuthService as GrpcAuthService;
+use crate::grpc_auth::auth_service_server::AuthService as GrpcAuthService;
 use crate::data::user_repository::UserRepository;
 use crate::domain::error::AuthError;
-use crate::{LoginRequest, LoginResponse, RegisterRequest, RegisterResponse};
+use crate::grpc_auth::{LoginRequest, LoginResponse, RegisterRequest, RegisterResponse};
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 

@@ -1,12 +1,11 @@
-fn main() {
-    // Этот код выполняется перед сборкой
+fn main() -> std::io::Result<()> {
+    println!("cargo:rerun-if-changed=proto/blog.proto");
+    println!("cargo:rerun-if-changed=proto/auth.proto");
 
-    // Показать предупреждение
-    println!("cargo:warning=This is a build script warning");
-
-    // Пересобрать при изменении файла
-    println!("cargo:rerun-if-changed=src/config.toml");
-
-    // Пересобрать при изменении переменной окружения
-    println!("cargo:rerun-if-env-changed=DATABASE_URL");
+    tonic_build::configure()
+        .build_client(true)
+        .build_server(false)
+        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
+        .compile(&["proto/blog.proto", "proto/auth.proto"], &["proto"])?;
+    Ok(())
 }
