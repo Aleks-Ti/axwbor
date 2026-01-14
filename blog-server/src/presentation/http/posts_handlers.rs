@@ -27,7 +27,6 @@ async fn create_post(
     user: AuthenticatedUser,
     payload: web::Json<PostRequest>,
 ) -> Result<impl Responder, PostError> {
-    println!("{:?}", user);
     let new_post = service
         .create_post(payload.title.clone(), payload.content.clone(), user.id)
         .await?;
@@ -39,7 +38,6 @@ async fn get_posts(
     service: web::Data<PostService<PostgresPostRepository>>,
     filter: web::Query<GetPostRequest>,
 ) -> Result<impl Responder, PostError> {
-    println!("{:?}", filter);
     let posts = service.get_posts(filter.limit, filter.offset).await?;
     Ok(HttpResponse::Ok().json(posts))
 }

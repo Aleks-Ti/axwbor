@@ -36,3 +36,15 @@ pub struct Post {
     pub author_id: i32,
     pub created_at: Option<String>, // или chrono::DateTime
 }
+
+#[derive(serde::Serialize, Debug, Clone)]
+pub struct PostFilterRequest {
+    pub limit: i32,
+    pub offset: i32,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+pub struct CreatePostRequest {
+    pub title: String,
+    pub content: String,
+}

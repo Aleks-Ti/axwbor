@@ -1,6 +1,9 @@
 use crate::BlogClient;
 use crate::error::BlogClientError;
-use crate::models::{LoginRequest, Post, RegisterRequest, RegisterResponse, TokenResponse, User};
+use crate::models::{
+    CreatePostRequest, LoginRequest, Post, PostFilterRequest, RegisterRequest, RegisterResponse,
+    TokenResponse, User,
+};
 use std::result::Result::Ok;
 
 pub struct HttpClient {
@@ -63,6 +66,102 @@ impl HttpClient {
         if res.status() == 400 {
             let error_text = res.text().await.map_err(BlogClientError::Http)?;
             tracing::error!("Login failed: {}", error_text);
+            return Err(BlogClientError::InvalidRequest(error_text));
+        }
+        if res.status() == 401 {
+            return Err(BlogClientError::Unauthorized);
+        }
+        if res.status() == 404 {
+            return Err(BlogClientError::NotFound);
+        }
+
+        let auth: TokenResponse = res.json().await?;
+        Ok(auth)
+    }
+
+    pub async fn posts(&self, limit: i32, offset: i32) -> Result<TokenResponse, BlogClientError> {
+        let body = PostFilterRequest { limit, offset };
+        let res = self
+            .inner
+            .get(format!("{}/post", self.base_url))
+            .query(&body)
+            .send()
+            .await?;
+        if res.status() == 400 {
+            let error_text = res.text().await.map_err(BlogClientError::Http)?;
+            tracing::error!("Get Posts failed: {}", error_text);
+            return Err(BlogClientError::InvalidRequest(error_text));
+        }
+        if res.status() == 401 {
+            return Err(BlogClientError::Unauthorized);
+        }
+        if res.status() == 404 {
+            return Err(BlogClientError::NotFound);
+        }
+
+        let auth: TokenResponse = res.json().await?;
+        Ok(auth)
+    }
+    pub async fn post(&self, post_id: i32) -> Result<TokenResponse, BlogClientError> {
+        let res = self
+            .inner
+            .post(format!("{}/post/{}", self.base_url, post_id))
+            .send()
+            .await?;
+        if res.status() == 400 {
+            let error_text = res.text().await.map_err(BlogClientError::Http)?;
+            tracing::error!("Get Post by id: {} - failed: {}", post_id, error_text);
+            return Err(BlogClientError::InvalidRequest(error_text));
+        }
+        if res.status() == 401 {
+            return Err(BlogClientError::Unauthorized);
+        }
+        if res.status() == 404 {
+            return Err(BlogClientError::NotFound);
+        }
+
+        let auth: TokenResponse = res.json().await?;
+        Ok(auth)
+    }
+    pub async fn post_update(
+        &self,
+        post_id: i32,
+        title: String,
+        content: String,
+        token: String,
+    ) -> Result<TokenResponse, BlogClientError> {
+        let body = CreatePostRequest { title, content };
+        let res = self
+            .inner
+            .post(format!("{}/auth/post/{}", self.base_url, post_id))
+            .header("access_token", token)
+            .json(&body)
+            .send()
+            .await?;
+        if res.status() == 400 {
+            let error_text = res.text().await.map_err(BlogClientError::Http)?;
+            tracing::error!("Update Post by id: {} - failed: {}", post_id, error_text);
+            return Err(BlogClientError::InvalidRequest(error_text));
+        }
+        if res.status() == 401 {
+            return Err(BlogClientError::Unauthorized);
+        }
+        if res.status() == 404 {
+            return Err(BlogClientError::NotFound);
+        }
+
+        let auth: TokenResponse = res.json().await?;
+        Ok(auth)
+    }
+    pub async fn post_delete(&self, post_id: i32) -> Result<TokenResponse, BlogClientError> {
+        let res = self
+            .inner
+            .post(format!("{}/auth/post/{}", self.base_url, post_id))
+            .send()
+            .await?;
+        if res.status() == 400 {
+            let error_text = res.text().await.map_err(BlogClientError::Http)?;
+            tracing::error!("Delete Post by id: {} - failed: {}", post_id, error_text);
             return Err(BlogClientError::InvalidRequest(error_text));
         }
         if res.status() == 401 {

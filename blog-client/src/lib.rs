@@ -26,36 +26,45 @@ pub enum Transport {
 #[derive(Clone)]
 pub struct BlogClient {
     transport: Transport,
-    http_client: Option<Arc<reqwest::Client>>,
+    http_client: Option<Arc<crate::http_client::HttpClient>>,
     grpc_client: Option<tonic::client::Grpc<tonic::transport::Channel>>,
     token: Option<String>,
 }
 
-
 impl BlogClient {
-    pub async fn new(transport: Transport) -> Result<Self, BlogClientError> {
-        let mut client = Self {
-            transport,
-            http_client: None,
-            grpc_client: None,
-            token: None,
-        };
-
-        match &client.transport {
-            Transport::Http(base_url) => {
-                let http = reqwest::Client::new();
-                client.http_client = Some(Arc::new(http));
+    pub async fn login(
+        &mut self,
+        username: String,
+        password: String,
+    ) -> Result<(), BlogClientError> {
+        match &self.transport {
+            Transport::Http(_) => {
+                let http = self.http_client.as_ref().unwrap();
+                let token_resp = http.login(username, password).await?;
+                self.set_token(token_resp.access_token);
+                Ok(())
             }
-            Transport::Grpc(addr) => {
-                let channel = tonic::transport::Endpoint::from_shared(addr.clone())
-                    .map_err(|e| BlogClientError::GrpcTransport(e.into()))?
-                    .connect()
-                    .await?;
-                client.grpc_client = Some(tonic::client::Grpc::new(channel));
+            Transport::Grpc(_) => {
+                // NOTE: вызов gRPC
+                unimplemented!()
             }
         }
+    }
 
-        Ok(client)
+    pub async fn register(
+        &self,
+        username: String,
+        email: String,
+        password: String,
+    ) -> Result<(), BlogClientError> {
+        match &self.transport {
+            Transport::Http(_) => {
+                let http = self.http_client.as_ref().unwrap();
+                http.register(username, email, password).await?;
+                Ok(())
+            }
+            Transport::Grpc(_) => unimplemented!(),
+        }
     }
 
     pub fn set_token(&mut self, token: String) {
