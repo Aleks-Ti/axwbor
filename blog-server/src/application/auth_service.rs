@@ -45,11 +45,11 @@ where
     }
 
     #[instrument(skip(self))]
-    pub async fn login(&self, email: &str, password: &str) -> Result<String, AuthError> {
+    pub async fn login(&self, username: &str, password: &str) -> Result<String, AuthError> {
         tracing::info!("user authenticated");
         let user = self
             .repo
-            .find_by_email(&email.to_lowercase())
+            .find_by_username(&username.to_lowercase())
             .await
             .map_err(AuthError::from)?
             .ok_or_else(|| DomainError::Unauthorized)?;

@@ -7,7 +7,7 @@ use crate::domain::{error::AuthError, user::NewUser, user::User};
 #[async_trait]
 pub trait UserRepository: Send + Sync {
     async fn create(&self, user: NewUser) -> Result<User, AuthError>;
-    async fn find_by_email(&self, email: &str) -> Result<Option<User>, AuthError>;
+    async fn find_by_username(&self, email: &str) -> Result<Option<User>, AuthError>;
     async fn find_by_id(&self, id: i64) -> Result<Option<User>, AuthError>;
 }
 
@@ -60,19 +60,19 @@ impl UserRepository for PostgresUserRepository {
         Ok(user_dto)
     }
 
-    async fn find_by_email(&self, email: &str) -> Result<Option<User>, AuthError> {
+    async fn find_by_username(&self, username: &str) -> Result<Option<User>, AuthError> {
         let row = sqlx::query(
             r#"
             SELECT id, email, username, password_hash, created_at
             FROM users
-            WHERE email = $1
+            WHERE username = $1
             "#,
         )
-        .bind(email)
+        .bind(username)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| {
-            tracing::error!("failed to find user by email {}: {}", email, e);
+            tracing::error!("failed to find user by username {}: {}", username, e);
             AuthError::Internal(format!("database error: {}", e))
         })?;
 

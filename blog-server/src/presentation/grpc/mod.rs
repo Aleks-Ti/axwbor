@@ -1,5 +1,4 @@
-pub mod auth_service;
-pub mod post_service;
-pub use post_service::PostGrpcService;
-pub use auth_service::AuthGrpcService;
-pub mod auth_interceptor;
+pub mod auth_handlers;
+pub mod post_handlers;
+pub use post_handlers::PostGrpcService;
+pub use auth_handlers::AuthGrpcService;

@@ -62,7 +62,7 @@ where
         let req = request.into_inner();
         let token = self
             .auth_service
-            .login(&req.email, &req.password)
+            .login(&req.username, &req.password)
             .await
             .map_err(map_error)?;
         Ok(Response::new(LoginResponse {

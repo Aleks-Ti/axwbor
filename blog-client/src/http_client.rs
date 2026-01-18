@@ -1,9 +1,6 @@
-use crate::BlogClient;
 use crate::error::BlogClientError;
-use crate::models::{
-    CreatePostRequest, LoginRequest, Post, PostFilterRequest, RegisterRequest, RegisterResponse,
-    TokenResponse, User,
-};
+use crate::grpc_auth;
+use crate::grpc_blog;
 use std::result::Result::Ok;
 
 pub struct HttpClient {
@@ -24,8 +21,8 @@ impl HttpClient {
         username: String,
         email: String,
         password: String,
-    ) -> Result<RegisterResponse, BlogClientError> {
-        let body = RegisterRequest {
+    ) -> Result<grpc_auth::RegisterResponse, BlogClientError> {
+        let body = grpc_auth::RegisterRequest {
             username,
             email,
             password,
@@ -47,7 +44,7 @@ impl HttpClient {
         if res.status() == 404 {
             return Err(BlogClientError::NotFound);
         }
-        let auth: RegisterResponse = res.json().await?;
+        let auth: grpc_auth::RegisterResponse = res.json().await?;
         Ok(auth)
     }
 
@@ -55,8 +52,8 @@ impl HttpClient {
         &self,
         username: String,
         password: String,
-    ) -> Result<TokenResponse, BlogClientError> {
-        let body = LoginRequest { username, password };
+    ) -> Result<grpc_auth::LoginResponse, BlogClientError> {
+        let body = grpc_auth::LoginRequest { username, password };
         let res = self
             .inner
             .post(format!("{}/auth/login", self.base_url))
@@ -75,12 +72,16 @@ impl HttpClient {
             return Err(BlogClientError::NotFound);
         }
 
-        let auth: TokenResponse = res.json().await?;
+        let auth: grpc_auth::LoginResponse = res.json().await?;
         Ok(auth)
     }
 
-    pub async fn posts(&self, limit: i32, offset: i32) -> Result<TokenResponse, BlogClientError> {
-        let body = PostFilterRequest { limit, offset };
+    pub async fn get_posts(
+        &self,
+        limit: i32,
+        offset: i32,
+    ) -> Result<grpc_blog::GetPostsResponse, BlogClientError> {
+        let body = grpc_blog::GetPostsRequest { limit, offset };
         let res = self
             .inner
             .get(format!("{}/post", self.base_url))
@@ -99,13 +100,16 @@ impl HttpClient {
             return Err(BlogClientError::NotFound);
         }
 
-        let auth: TokenResponse = res.json().await?;
-        Ok(auth)
+        let posts: grpc_blog::GetPostsResponse = res.json().await?;
+        Ok(posts)
     }
-    pub async fn post(&self, post_id: i32) -> Result<TokenResponse, BlogClientError> {
+    pub async fn get_post(
+        &self,
+        post_id: i64,
+    ) -> Result<grpc_blog::GetPostResponse, BlogClientError> {
         let res = self
             .inner
-            .post(format!("{}/post/{}", self.base_url, post_id))
+            .get(format!("{}/post/{}", self.base_url, post_id))
             .send()
             .await?;
         if res.status() == 400 {
@@ -120,20 +124,24 @@ impl HttpClient {
             return Err(BlogClientError::NotFound);
         }
 
-        let auth: TokenResponse = res.json().await?;
-        Ok(auth)
+        let post: grpc_blog::GetPostResponse = res.json().await?;
+        Ok(post)
     }
-    pub async fn post_update(
+    pub async fn update_post(
         &self,
-        post_id: i32,
+        post_id: i64,
         title: String,
         content: String,
         token: String,
-    ) -> Result<TokenResponse, BlogClientError> {
-        let body = CreatePostRequest { title, content };
+    ) -> Result<grpc_blog::UpdatePostResponse, BlogClientError> {
+        let body = grpc_blog::UpdatePostRequest {
+            id: post_id,
+            title,
+            content,
+        };
         let res = self
             .inner
-            .post(format!("{}/auth/post/{}", self.base_url, post_id))
+            .put(format!("{}/auth/post/{}", self.base_url, post_id))
             .header("access_token", token)
             .json(&body)
             .send()
@@ -150,13 +158,44 @@ impl HttpClient {
             return Err(BlogClientError::NotFound);
         }
 
-        let auth: TokenResponse = res.json().await?;
-        Ok(auth)
+        let post: grpc_blog::UpdatePostResponse = res.json().await?;
+        Ok(post)
     }
-    pub async fn post_delete(&self, post_id: i32) -> Result<TokenResponse, BlogClientError> {
+    pub async fn create_post(
+        &self,
+        title: String,
+        content: String,
+        token: String,
+    ) -> Result<grpc_blog::CreatePostResponse, BlogClientError> {
+        let body = grpc_blog::CreatePostRequest { title, content };
         let res = self
             .inner
-            .post(format!("{}/auth/post/{}", self.base_url, post_id))
+            .post(format!("{}/auth/post", self.base_url))
+            .header("access_token", token)
+            .json(&body)
+            .send()
+            .await?;
+        if res.status() == 400 {
+            let error_text = res.text().await.map_err(BlogClientError::Http)?;
+            tracing::error!("Create Post - failed: {}", error_text);
+            return Err(BlogClientError::InvalidRequest(error_text));
+        }
+        if res.status() == 401 {
+            return Err(BlogClientError::Unauthorized);
+        }
+        if res.status() == 404 {
+            return Err(BlogClientError::NotFound);
+        }
+
+        let post: grpc_blog::CreatePostResponse = res.json().await?;
+        Ok(post)
+    }
+
+    pub async fn delete_post(&self, post_id: i64, token: String) -> Result<(), BlogClientError> {
+        let res = self
+            .inner
+            .delete(format!("{}/auth/post/{}", self.base_url, post_id))
+            .header("access_token", token)
             .send()
             .await?;
         if res.status() == 400 {
@@ -170,9 +209,7 @@ impl HttpClient {
         if res.status() == 404 {
             return Err(BlogClientError::NotFound);
         }
-
-        let auth: TokenResponse = res.json().await?;
-        Ok(auth)
+        Ok(())
     }
 }
 
@@ -190,10 +227,12 @@ mod tests {
 
         Mock::given(method("POST"))
             .and(path("/auth/register"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(RegisterResponse {
-                user_id: expected_id,
-                email: expected_email.to_string(),
-            }))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_json(grpc_auth::RegisterResponse {
+                    id: expected_id,
+                    email: expected_email.to_string(),
+                }),
+            )
             .mount(&mock_server)
             .await;
 
@@ -208,7 +247,7 @@ mod tests {
             .expect("Register should succeed");
 
         assert_eq!(res.email, expected_email);
-        assert_eq!(res.user_id, expected_id);
+        assert_eq!(res.id, expected_id);
     }
 
     // Тест интеграционный, одноразовый. Чтобы работало, нужно запустить blog-server.
