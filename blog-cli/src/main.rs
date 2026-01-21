@@ -99,7 +99,7 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<(), BlogClientError> {
     let cli = Cli::parse();
-    let mut client = BlogClient::new(Transport::http_default()).await?;
+    let mut client = BlogClient::new(Transport::grpc_default()).await?;
     match cli.command {
         Commands::Login { username, password } => {
             let token = client
@@ -119,16 +119,18 @@ async fn main() -> Result<(), BlogClientError> {
                 .expect("Регистрация не удалась");
         }
         Commands::List { limit, offset } => {
-            client
+            let result = client
                 .list_posts(limit.unwrap_or(10i32), offset.unwrap_or(0i32))
                 .await
                 .expect("Получение списка постов не удалось");
+            println!("Posts: {:?}", result);
         }
         Commands::Get { id } => {
-            client
+            let result = client
                 .get_post(id)
                 .await
                 .expect("Получение поста не удалось");
+            println!("Post: {:?}", result);
         }
         _ => {
             let token = load_token().await?;

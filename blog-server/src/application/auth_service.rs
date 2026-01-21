@@ -40,20 +40,22 @@ where
         password: String,
     ) -> Result<User, AuthError> {
         let hash = hash_password(&password).map_err(|err| AuthError::Internal(err.to_string()))?;
-        let user = NewUser::new(email.to_lowercase(), username, hash);
+        let user = NewUser::new(email.to_lowercase(), username.to_lowercase(), hash);
         self.repo.create(user).await.map_err(AuthError::from)
     }
 
     #[instrument(skip(self))]
     pub async fn login(&self, username: &str, password: &str) -> Result<String, AuthError> {
         tracing::info!("user authenticated");
+        println!("Authenticating user: {}", username);
+        println!("Authenticating user: {}", password);
         let user = self
             .repo
             .find_by_username(&username.to_lowercase())
             .await
             .map_err(AuthError::from)?
             .ok_or_else(|| DomainError::Unauthorized)?;
-
+        println!("Found user: {:?}", user);
         let valid = verify_password(password, &user.password_hash)
             .map_err(|_| DomainError::Unauthorized)?;
         if !valid {
