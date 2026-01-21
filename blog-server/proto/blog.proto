@@ -45,9 +45,9 @@ message GetPostResponse {
 }
 
 message UpdatePostRequest {
-  int64  id        = 1;
-  string title     = 2;
-  string content   = 3;
+  int64           id      = 1;
+  optional string title   = 2;
+  optional string content = 3;
 }
 
 message UpdatePostResponse {

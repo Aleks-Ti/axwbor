@@ -14,8 +14,8 @@ pub use http_client::HttpClient;
 
 use std::sync::Arc;
 
-pub const DEFAULT_HTTP_URL: &str = "http://localhost:8080";
-pub const DEFAULT_GRPC_URL: &str = "http://localhost:50051";
+pub const DEFAULT_HTTP_URL: &str = "http://localhost:8080/api";
+pub const DEFAULT_GRPC_URL: &str = "http://localhost:50051/api";
 
 // Выбор транспорта для общение с API
 // Можно передать как дефолт let client = BlogClient::new(Transport::http_default()).await?;
@@ -74,7 +74,7 @@ impl BlogClient {
         &mut self,
         username: String,
         password: String,
-    ) -> Result<(), BlogClientError> {
+    ) -> Result<std::string::String, BlogClientError> {
         match &self.transport {
             Transport::Http(_) => {
                 let client = self
@@ -82,12 +82,17 @@ impl BlogClient {
                     .as_ref()
                     .expect("HTTP client not initialized");
                 let response = client.login(username, password).await?;
-                self.set_token(response.access_token);
-                Ok(())
+                self.set_token(response.access_token.clone());
+                Ok(response.access_token)
             }
             Transport::Grpc(_) => {
-                // NOTE: вызов gRPC
-                unimplemented!()
+                let client = self
+                    .grpc_client
+                    .as_ref()
+                    .expect("gRPC client not initialized");
+                let response = client.login(username, password).await?;
+                self.set_token(response.access_token.clone());
+                Ok(response.access_token)
             }
         }
     }
@@ -107,7 +112,14 @@ impl BlogClient {
                 let response = client.register(username, email, password).await?;
                 Ok(response)
             }
-            Transport::Grpc(_) => unimplemented!(),
+            Transport::Grpc(_) => {
+                let client = self
+                    .grpc_client
+                    .as_ref()
+                    .expect("gRPC client not initialized");
+                let response = client.register(username, email, password).await?;
+                Ok(response)
+            }
         }
     }
 
@@ -155,8 +167,8 @@ impl BlogClient {
     pub async fn update_post(
         &self,
         post_id: i64,
-        title: String,
-        content: String,
+        title: Option<String>,
+        content: Option<String>,
     ) -> Result<grpc_blog::UpdatePostResponse, BlogClientError> {
         match &self.transport {
             Transport::Http(_) => {

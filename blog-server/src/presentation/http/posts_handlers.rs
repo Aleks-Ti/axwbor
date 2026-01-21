@@ -2,7 +2,7 @@ use crate::data::post_repository::PostgresPostRepository;
 use crate::domain::error::PostError;
 use crate::infrastructure::jwt::JwtKeys;
 use crate::presentation::auth::AuthenticatedUser;
-use crate::presentation::dto::{GetPostRequest, PostRequest};
+use crate::presentation::dto::{GetPostRequest, PostRequest, PutRequest};
 use crate::{application::blog_service::PostService, presentation::middleware::JwtAuthMiddleware};
 use actix_web::{HttpResponse, Responder, Scope, delete, get, post, put, web};
 
@@ -57,7 +57,7 @@ async fn update_post(
     service: web::Data<PostService<PostgresPostRepository>>,
     user: AuthenticatedUser,
     path: web::Path<String>,
-    payload: web::Json<PostRequest>,
+    payload: web::Json<PutRequest>,
 ) -> Result<impl Responder, PostError> {
     let id = path.into_inner();
     let post = service

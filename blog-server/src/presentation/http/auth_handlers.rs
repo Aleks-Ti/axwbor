@@ -31,7 +31,7 @@ async fn register(
     tracing::info!(user_id = %user.id, email = %user.email, "user registered");
 
     Ok(HttpResponse::Created().json(serde_json::json!({
-        "user_id": user.id,
-        "email": user.email
+        "email": user.email,
+        "id": user.id,
     })))
 }

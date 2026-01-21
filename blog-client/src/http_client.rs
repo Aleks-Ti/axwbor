@@ -103,6 +103,7 @@ impl HttpClient {
         let posts: grpc_blog::GetPostsResponse = res.json().await?;
         Ok(posts)
     }
+
     pub async fn get_post(
         &self,
         post_id: i64,
@@ -127,11 +128,12 @@ impl HttpClient {
         let post: grpc_blog::GetPostResponse = res.json().await?;
         Ok(post)
     }
+
     pub async fn update_post(
         &self,
         post_id: i64,
-        title: String,
-        content: String,
+        title: Option<String>,
+        content: Option<String>,
         token: String,
     ) -> Result<grpc_blog::UpdatePostResponse, BlogClientError> {
         let body = grpc_blog::UpdatePostRequest {
@@ -161,6 +163,7 @@ impl HttpClient {
         let post: grpc_blog::UpdatePostResponse = res.json().await?;
         Ok(post)
     }
+
     pub async fn create_post(
         &self,
         title: String,
@@ -266,7 +269,7 @@ mod tests {
         match res {
             Ok(auth) => {
                 assert!(!auth.email.is_empty());
-                assert!(!auth.user_id.is_negative());
+                assert!(!auth.id.is_negative());
             }
             Err(e) => {
                 println!("IntegrationTest::Registration failed: {:?}", e);

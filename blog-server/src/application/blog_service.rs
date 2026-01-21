@@ -47,8 +47,8 @@ where
     pub async fn update_post(
         &self,
         id: i64,
-        title: String,
-        content: String,
+        title: Option<String>,
+        content: Option<String>,
         current_user_id: i64,
     ) -> Result<Post, PostError> {
         let post = self.repo.find_by_id(id).await.map_err(PostError::from)?;
@@ -58,9 +58,8 @@ where
         if post.unwrap().author_id != current_user_id {
             return Err(PostError::Forbidden);
         }
-        let post = NewPost::new(title, content, current_user_id);
         self.repo
-            .update(id, post)
+            .update(id, title, content)
             .await
             .map_err(PostError::from)?
             .ok_or_else(|| PostError::PostNotFound(format!("post {} not found", id)))

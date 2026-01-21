@@ -31,6 +31,12 @@ pub struct PostRequest {
     pub content: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PutRequest {
+    pub title: Option<String>,
+    pub content: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct GetPostRequest {
     pub limit: i32,

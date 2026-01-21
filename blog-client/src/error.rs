@@ -11,6 +11,9 @@ pub enum BlogClientError {
     #[error("gRPC call failed: {0}")]
     GrpcStatus(#[from] tonic::Status),
 
+    #[error("Token is missing")]
+    Io(#[from] std::io::Error),
+
     #[error("Not found")]
     NotFound,
 

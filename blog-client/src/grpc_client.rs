@@ -88,8 +88,8 @@ impl GrpcClient {
     pub async fn update_post(
         &self,
         post_id: i64,
-        title: String,
-        content: String,
+        title: Option<String>,
+        content: Option<String>,
         token: String,
     ) -> Result<grpc_blog::UpdatePostResponse, BlogClientError> {
         let mut client = self.blog_client.clone();
