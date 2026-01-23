@@ -493,6 +493,7 @@ dependencies = [
  "blog-client",
  "clap",
  "dirs",
+ "serde_json",
  "tokio",
 ]
 

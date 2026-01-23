@@ -7,7 +7,7 @@ use crate::domain::{error::AuthError, user::NewUser, user::User};
 #[async_trait]
 pub trait UserRepository: Send + Sync {
     async fn create(&self, user: NewUser) -> Result<User, AuthError>;
-    async fn find_by_username(&self, email: &str) -> Result<Option<User>, AuthError>;
+    async fn find_by_username(&self, username: &str) -> Result<Option<User>, AuthError>;
     async fn find_by_id(&self, id: i64) -> Result<Option<User>, AuthError>;
 }
 
@@ -76,13 +76,14 @@ impl UserRepository for PostgresUserRepository {
             AuthError::Internal(format!("database error: {}", e))
         })?;
 
-        Ok(row.map(|row| User {
+        let user = row.map(|row| User {
             id: row.get("id"),
             email: row.get("email"),
             username: row.get("username"),
             password_hash: row.get("password_hash"),
             created_at: row.get("created_at"),
-        }))
+        });
+        Ok(user)
     }
 
     async fn find_by_id(&self, id: i64) -> Result<Option<User>, AuthError> {

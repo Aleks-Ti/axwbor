@@ -30,6 +30,7 @@ async fn create_post(
     let new_post = service
         .create_post(payload.title.clone(), payload.content.clone(), user.id)
         .await?;
+    println!("{:?}", new_post);
     Ok(HttpResponse::Created().json(new_post))
 }
 
@@ -39,7 +40,7 @@ async fn get_posts(
     filter: web::Query<GetPostRequest>,
 ) -> Result<impl Responder, PostError> {
     let posts = service.get_posts(filter.limit, filter.offset).await?;
-    Ok(HttpResponse::Ok().json(posts))
+    Ok(HttpResponse::Ok().json({"posts": posts}))
 }
 
 #[get("/{id}")]

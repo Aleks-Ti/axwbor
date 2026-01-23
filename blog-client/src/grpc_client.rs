@@ -32,8 +32,8 @@ impl GrpcClient {
 
     pub async fn register(
         &self,
-        email: String,
         username: String,
+        email: String,
         password: String,
     ) -> Result<grpc_auth::RegisterResponse, BlogClientError> {
         let mut client = self.auth_client.clone();
@@ -76,7 +76,7 @@ impl GrpcClient {
         let mut meta = MetadataMap::new();
         let token_value = MetadataValue::try_from(format!("Bearer {}", token))
             .map_err(|_| BlogClientError::InvalidRequest("ass".to_string()))?;
-        meta.insert("access_token", token_value);
+        meta.insert("authorization", token_value);
         let request = tonic::Request::from_parts(
             meta,
             tonic::Extensions::default(),
@@ -96,7 +96,7 @@ impl GrpcClient {
         let mut meta = MetadataMap::new();
         let token_value = MetadataValue::try_from(format!("Bearer {}", token))
             .map_err(|_| BlogClientError::InvalidRequest("ass".to_string()))?;
-        meta.insert("access_token", token_value);
+        meta.insert("authorization", token_value);
         let request = tonic::Request::from_parts(
             meta,
             tonic::Extensions::default(),
@@ -118,7 +118,7 @@ impl GrpcClient {
         let mut meta = MetadataMap::new();
         let token_value = MetadataValue::try_from(format!("Bearer {}", token))
             .map_err(|_| BlogClientError::InvalidRequest("ass".to_string()))?;
-        meta.insert("access_token", token_value);
+        meta.insert("authorization", token_value);
         let request = tonic::Request::from_parts(
             meta,
             tonic::Extensions::default(),

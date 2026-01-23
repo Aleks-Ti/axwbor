@@ -99,7 +99,7 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<(), BlogClientError> {
     let cli = Cli::parse();
-    let mut client = BlogClient::new(Transport::grpc_default()).await?;
+    let mut client = BlogClient::new(Transport::http_default()).await?;
     match cli.command {
         Commands::Login { username, password } => {
             let token = client
@@ -107,6 +107,7 @@ async fn main() -> Result<(), BlogClientError> {
                 .await
                 .expect("Авторизация не удалась");
             save_token(&token).await?;
+            println!("Авторизация успешна. Токен сохранён.");
         }
         Commands::Register {
             username,
@@ -117,42 +118,59 @@ async fn main() -> Result<(), BlogClientError> {
                 .register(username, email, password)
                 .await
                 .expect("Регистрация не удалась");
+            println!("Регистрация успешна.");
         }
         Commands::List { limit, offset } => {
             let result = client
                 .list_posts(limit.unwrap_or(10i32), offset.unwrap_or(0i32))
                 .await
                 .expect("Получение списка постов не удалось");
-            println!("Posts: {:?}", result);
+            let json_output = serde_json::to_string_pretty(&result)
+                .expect("Не удалось сериализовать ответ в JSON");
+            println!("Список постов:");
+            println!("{}", json_output);
         }
         Commands::Get { id } => {
             let result = client
                 .get_post(id)
                 .await
                 .expect("Получение поста не удалось");
-            println!("Post: {:?}", result);
+            let json_output = serde_json::to_string_pretty(&result)
+                .expect("Не удалось сериализовать ответ в JSON");
+            println!("Список постов:");
+            println!("{}", json_output);
         }
         _ => {
             let token = load_token().await?;
             client.set_token(token);
             match cli.command {
                 Commands::Create { title, content } => {
-                    client
+                    let result = client
                         .create_post(title, content)
                         .await
                         .expect("Создание поста не удалось");
+                    println!("{:?}", result);
+                    let json_output = serde_json::to_string_pretty(&result)
+                        .expect("Не удалось сериализовать ответ в JSON");
+                    println!("Пост успешно создан:");
+                    println!("{}", json_output);
                 }
                 Commands::Update { id, title, content } => {
-                    client
+                    let result = client
                         .update_post(id, title, content)
                         .await
                         .expect("Обновление поста не удалось");
+                    let json_output = serde_json::to_string_pretty(&result)
+                        .expect("Не удалось сериализовать ответ в JSON");
+                    println!("Пост успешно обновлён.");
+                    println!("{}", json_output);
                 }
                 Commands::Delete { id } => {
                     client
                         .delete_post(id)
                         .await
                         .expect("Удаление поста не удалось");
+                    println!("Пост успешно удалён.");
                 }
                 _ => {}
             }

@@ -100,7 +100,9 @@ impl HttpClient {
             return Err(BlogClientError::NotFound);
         }
 
-        let posts: grpc_blog::GetPostsResponse = res.json().await?;
+        let posts = grpc_blog::GetPostsResponse {
+            posts: res.json().await?,
+        };
         Ok(posts)
     }
 
@@ -125,7 +127,9 @@ impl HttpClient {
             return Err(BlogClientError::NotFound);
         }
 
-        let post: grpc_blog::GetPostResponse = res.json().await?;
+        let post = grpc_blog::GetPostResponse {
+            post: res.json().await?,
+        };
         Ok(post)
     }
 
@@ -141,10 +145,11 @@ impl HttpClient {
             title,
             content,
         };
+        let br_token = format!("Bearer {}", token);
         let res = self
             .inner
-            .put(format!("{}/auth/post/{}", self.base_url, post_id))
-            .header("access_token", token)
+            .put(format!("{}/post/{}", self.base_url, post_id))
+            .header("authorization", br_token)
             .json(&body)
             .send()
             .await?;
@@ -160,7 +165,9 @@ impl HttpClient {
             return Err(BlogClientError::NotFound);
         }
 
-        let post: grpc_blog::UpdatePostResponse = res.json().await?;
+        let post = grpc_blog::UpdatePostResponse {
+            post: res.json().await?,
+        };
         Ok(post)
     }
 
@@ -170,11 +177,12 @@ impl HttpClient {
         content: String,
         token: String,
     ) -> Result<grpc_blog::CreatePostResponse, BlogClientError> {
+        let br_token = format!("Bearer {}", token);
         let body = grpc_blog::CreatePostRequest { title, content };
         let res = self
             .inner
-            .post(format!("{}/auth/post", self.base_url))
-            .header("access_token", token)
+            .post(format!("{}/post", self.base_url))
+            .header("authorization", br_token)
             .json(&body)
             .send()
             .await?;
@@ -189,16 +197,18 @@ impl HttpClient {
         if res.status() == 404 {
             return Err(BlogClientError::NotFound);
         }
-
-        let post: grpc_blog::CreatePostResponse = res.json().await?;
+        let post = grpc_blog::CreatePostResponse {
+            post: res.json().await?,
+        };
         Ok(post)
     }
 
     pub async fn delete_post(&self, post_id: i64, token: String) -> Result<(), BlogClientError> {
+        let br_token = format!("Bearer {}", token);
         let res = self
             .inner
-            .delete(format!("{}/auth/post/{}", self.base_url, post_id))
-            .header("access_token", token)
+            .delete(format!("{}/post/{}", self.base_url, post_id))
+            .header("authorization", br_token)
             .send()
             .await?;
         if res.status() == 400 {

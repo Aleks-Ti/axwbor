@@ -55,7 +55,7 @@ where
             .await
             .map_err(AuthError::from)?
             .ok_or_else(|| DomainError::Unauthorized)?;
-        println!("Found user: {:?}", user);
+        println!("!!!!!!!!!!!!!!!!!!!!!!Found user: {:?}", user);
         let valid = verify_password(password, &user.password_hash)
             .map_err(|_| DomainError::Unauthorized)?;
         if !valid {
