@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>Dioxus App</title>
-  <link rel="modulepreload" href="/blog-wasm-11bd9dad6af7be8.js" crossorigin="anonymous" integrity="sha384-25q3mNYJIcjWPVL27MEo3aogGamV/DOKv4TcKdOqTqZBSrusfhIxUOPj4NXvgJaa"><link rel="modulepreload" href="/snippets/dioxus-cli-config-8d0dd142fb491fe2/inline0.js" crossorigin="anonymous" integrity="sha384-63GOaGGIhEHCB9m4vzzYEBfUIIUWiAYuNlk/LB2TuDDcjK13LO2II01K9xxO0fFG"><link rel="modulepreload" href="/snippets/dioxus-interpreter-js-c0f0333193e32f17/src/js/set_attribute.js" crossorigin="anonymous" integrity="sha384-KzHUe16NLJR2eaeVyqeB7zwb1qHGH3sV/aw0aS7V/+IeQwWH6OAnZ9nbGkwEyGzZ"><link rel="modulepreload" href="/snippets/dioxus-web-afdd4c4e5aff9d11/inline0.js" crossorigin="anonymous" integrity="sha384-2v8X0XAeO26J0vmoLhIbIeAjVzFnrY9iLhlYJcksTMp7Ip2tbDcoX4vD/hCan7M7"><link rel="modulepreload" href="/snippets/dioxus-interpreter-js-c0f0333193e32f17/src/js/hydrate.js" crossorigin="anonymous" integrity="sha384-Ocp9HYCb7T7M2KNri/Y2CHx/JgjlahEvu2KUTc/YKyGLB0s0pgNeCaanjX7egjMz"><link rel="modulepreload" href="/snippets/dioxus-interpreter-js-c0f0333193e32f17/src/js/patch_console.js" crossorigin="anonymous" integrity="sha384-r+5veWcnM6yFNXixia5X8SIr1KdMZfaSc4dp0/8fqFpt3s6gK4zUXXSkvHdZ4TmG"><link rel="modulepreload" href="/snippets/dioxus-interpreter-js-c0f0333193e32f17/inline0.js" crossorigin="anonymous" integrity="sha384-j0LKwUivj+3TJqebf9mBv6v1Yu2sX+LAJanOVfQAVOZpWTU0+pzzo8XExJBFDUso"><link rel="modulepreload" href="/snippets/dioxus-web-afdd4c4e5aff9d11/src/js/eval.js" crossorigin="anonymous" integrity="sha384-p8SsdRWHMmi6kI0ok6n5NV3mpIQPM5rkaJiiTwobcDIXKNhvajvPCqsBACIQVcP8"><link rel="preload" href="/blog-wasm-11bd9dad6af7be8_bg.wasm" crossorigin="anonymous" integrity="sha384-rzrvNMxTQIbt2kKVl7hMRSH5qnbhxDgAfGjLLSgdezDHQeHWn00S2HQfmLAHa1k9" as="fetch" type="application/wasm"></head>
-  <body>
+
+<head>
+  <meta charset="utf-8">
+  <title>Dioxus App</title>
+<link rel="modulepreload" href="/blog-wasm-5a0aff2ff4882eba.js" crossorigin="anonymous" integrity="sha384-p72IQ0lumxobqRmswZ3CwTaWxpcZsEKdb89zh0NKvNX3ZTm7YPh+lLMpEBkQWlKe"><link rel="modulepreload" href="/snippets/dioxus-web-afdd4c4e5aff9d11/inline0.js" crossorigin="anonymous" integrity="sha384-2v8X0XAeO26J0vmoLhIbIeAjVzFnrY9iLhlYJcksTMp7Ip2tbDcoX4vD/hCan7M7"><link rel="modulepreload" href="/snippets/dioxus-interpreter-js-c0f0333193e32f17/src/js/set_attribute.js" crossorigin="anonymous" integrity="sha384-KzHUe16NLJR2eaeVyqeB7zwb1qHGH3sV/aw0aS7V/+IeQwWH6OAnZ9nbGkwEyGzZ"><link rel="modulepreload" href="/snippets/dioxus-web-afdd4c4e5aff9d11/src/js/eval.js" crossorigin="anonymous" integrity="sha384-p8SsdRWHMmi6kI0ok6n5NV3mpIQPM5rkaJiiTwobcDIXKNhvajvPCqsBACIQVcP8"><link rel="modulepreload" href="/snippets/dioxus-interpreter-js-c0f0333193e32f17/src/js/patch_console.js" crossorigin="anonymous" integrity="sha384-r+5veWcnM6yFNXixia5X8SIr1KdMZfaSc4dp0/8fqFpt3s6gK4zUXXSkvHdZ4TmG"><link rel="modulepreload" href="/snippets/dioxus-interpreter-js-c0f0333193e32f17/inline0.js" crossorigin="anonymous" integrity="sha384-j0LKwUivj+3TJqebf9mBv6v1Yu2sX+LAJanOVfQAVOZpWTU0+pzzo8XExJBFDUso"><link rel="modulepreload" href="/snippets/dioxus-cli-config-8d0dd142fb491fe2/inline0.js" crossorigin="anonymous" integrity="sha384-63GOaGGIhEHCB9m4vzzYEBfUIIUWiAYuNlk/LB2TuDDcjK13LO2II01K9xxO0fFG"><link rel="modulepreload" href="/snippets/dioxus-interpreter-js-c0f0333193e32f17/src/js/hydrate.js" crossorigin="anonymous" integrity="sha384-Ocp9HYCb7T7M2KNri/Y2CHx/JgjlahEvu2KUTc/YKyGLB0s0pgNeCaanjX7egjMz"><link rel="preload" href="/blog-wasm-5a0aff2ff4882eba_bg.wasm" crossorigin="anonymous" integrity="sha384-jEuGNk4uyeWlVTsTW9D/k5KbPAiZTARoym8O6Cgc3hhEW+Qr+soTM38f/UKrzp4G" as="fetch" type="application/wasm"></head>
+
+<body>
+  <div id="main"></div>
+
 <script type="module">
-import init, * as bindings from '/blog-wasm-11bd9dad6af7be8.js';
-const wasm = await init({ module_or_path: '/blog-wasm-11bd9dad6af7be8_bg.wasm' });
+import init, * as bindings from '/blog-wasm-5a0aff2ff4882eba.js';
+const wasm = await init({ module_or_path: '/blog-wasm-5a0aff2ff4882eba_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -145,4 +149,5 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 })()
 </script></body>
+
 </html>
