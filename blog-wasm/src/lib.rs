@@ -1,14 +1,18 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use dioxus::prelude::*;
+
+fn app() -> Element {
+    println!("App function called!");
+    log::info!("App function called via log!");
+
+    rsx! {
+        div {
+            h1 { "Hello World!" }
+            p { "Test message" }
+        }
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+fn main() {
+    println!("Main function called!");
+    dioxus::launch(app);
 }
