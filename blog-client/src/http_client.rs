@@ -1,14 +1,18 @@
+//! HTTP client for the Blog application.
+
 use crate::error::BlogClientError;
 use crate::grpc_auth;
 use crate::grpc_blog;
 use std::result::Result::Ok;
 
+/// HTTP клиент для взаимодействия с блог-сервером.
 pub struct HttpClient {
     base_url: String,
     inner: reqwest::Client,
 }
 
 impl HttpClient {
+    /// Создаёт новый экземпляр HttpClient с заданным базовым URL.
     pub fn new(base_url: String) -> Self {
         Self {
             base_url,
@@ -16,6 +20,7 @@ impl HttpClient {
         }
     }
 
+    /// Регистрирует нового пользователя и возвращает ответ gRPC.
     pub async fn register(
         &self,
         username: String,
@@ -48,6 +53,7 @@ impl HttpClient {
         Ok(auth)
     }
 
+    /// Выполняет вход пользователя и возвращает ответ gRPC.
     pub async fn login(
         &self,
         username: String,
@@ -76,6 +82,7 @@ impl HttpClient {
         Ok(auth)
     }
 
+    /// Получает список постов с заданными лимитом и смещением.
     pub async fn get_posts(
         &self,
         limit: i32,
@@ -106,6 +113,7 @@ impl HttpClient {
         Ok(posts)
     }
 
+    /// Получает пост по его идентификатору.
     pub async fn get_post(
         &self,
         post_id: i64,
@@ -133,6 +141,7 @@ impl HttpClient {
         Ok(post)
     }
 
+    /// Обновляет пост с заданным идентификатором, заголовком и содержимым.
     pub async fn update_post(
         &self,
         post_id: i64,
@@ -171,6 +180,7 @@ impl HttpClient {
         Ok(post)
     }
 
+    /// Создаёт новый пост с заданным заголовком и содержимым.
     pub async fn create_post(
         &self,
         title: String,
@@ -203,6 +213,7 @@ impl HttpClient {
         Ok(post)
     }
 
+    /// Удаляет пост с заданным идентификатором.
     pub async fn delete_post(&self, post_id: i64, token: String) -> Result<(), BlogClientError> {
         let br_token = format!("Bearer {}", token);
         let res = self

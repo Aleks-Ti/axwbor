@@ -1,7 +1,11 @@
+//! Blog Client Library
+
+/// gRPC-модуль для блога.
 pub mod grpc_blog {
     tonic::include_proto!("blog");
 }
 
+/// gRPC-модуль для аутентификации.
 pub mod grpc_auth {
     tonic::include_proto!("auth");
 }
@@ -14,28 +18,35 @@ pub use http_client::HttpClient;
 
 use std::sync::Arc;
 
+/// Дефолтные URL для HTTP и gRPC клиентов.
 pub const DEFAULT_HTTP_URL: &str = "http://localhost:8080/api";
+/// Дефолтный URL для gRPC клиента.
 pub const DEFAULT_GRPC_URL: &str = "http://localhost:50051/api";
 
-// Выбор транспорта для общение с API
-// Можно передать как дефолт let client = BlogClient::new(Transport::http_default()).await?;
-// или let client = BlogClient::new(Transport::Http("https://api.myblog.com".into())).await?;
+/// Выбор транспорта для общение с API
+/// Можно передать как дефолт let client = BlogClient::new(Transport::http_default()).await?;
+/// или let client = BlogClient::new(Transport::Http("https://api.myblog.com".into())).await?;
 #[derive(Debug, Clone)]
 pub enum Transport {
+    /// HTTP транспорт с базовым URL
     Http(String),
+    /// gRPC транспорт с адресом сервера
     Grpc(String),
 }
 
 impl Transport {
+    /// Возвращает дефолтный HTTP транспорт
     pub fn http_default() -> Self {
         Self::Http(DEFAULT_HTTP_URL.to_string())
     }
 
+    /// Возвращает дефолтный gRPC транспорт
     pub fn grpc_default() -> Self {
         Self::Grpc(DEFAULT_GRPC_URL.to_string())
     }
 }
 
+/// Клиент для взаимодействия с блог-сервером через HTTP или gRPC.
 #[derive(Clone)]
 pub struct BlogClient {
     transport: Transport,
@@ -45,6 +56,7 @@ pub struct BlogClient {
 }
 
 impl BlogClient {
+    /// Создаёт новый экземпляр BlogClient с заданным транспортом.
     pub async fn new(transport: Transport) -> Result<Self, BlogClientError> {
         let http_client = match &transport {
             Transport::Http(base_url) => Some(Arc::new(HttpClient::new(base_url.clone()))),
@@ -54,8 +66,7 @@ impl BlogClient {
         let grpc_client = match &transport {
             Transport::Http(_) => None,
             Transport::Grpc(addr) => {
-                let channel = tonic::transport::Endpoint::from_shared(addr.clone())
-                    .map_err(|e| BlogClientError::GrpcTransport(e))?
+                let channel = tonic::transport::Endpoint::from_shared(addr.clone())?
                     .connect()
                     .await?;
                 Some(Arc::new(crate::grpc_client::GrpcClient::new(channel)))
@@ -70,6 +81,7 @@ impl BlogClient {
         })
     }
 
+    /// Выполняет вход пользователя и возвращает JWT токен.
     pub async fn login(
         &mut self,
         username: String,
@@ -97,6 +109,7 @@ impl BlogClient {
         }
     }
 
+    /// Регистрирует нового пользователя и возвращает ответ gRPC.
     pub async fn register(
         &self,
         username: String,
@@ -123,14 +136,17 @@ impl BlogClient {
         }
     }
 
+    /// Устанавливает JWT токен для аутентификации.
     pub fn set_token(&mut self, token: String) {
         self.token = Some(token);
     }
 
+    /// Получает текущий JWT токен, если он установлен.
     pub fn get_token(&self) -> Option<&str> {
         self.token.as_deref()
     }
 
+    /// Создаёт новый пост с заданным заголовком и содержимым.
     pub async fn create_post(
         &self,
         title: String,
@@ -164,6 +180,7 @@ impl BlogClient {
         }
     }
 
+    /// Обновляет пост с заданным идентификатором, заголовком и содержимым.
     pub async fn update_post(
         &self,
         post_id: i64,
@@ -198,6 +215,7 @@ impl BlogClient {
         }
     }
 
+    /// Удаляет пост с заданным идентификатором.
     pub async fn delete_post(&self, post_id: i64) -> Result<(), BlogClientError> {
         match &self.transport {
             Transport::Http(_) => {
@@ -225,6 +243,7 @@ impl BlogClient {
         }
     }
 
+    /// Получает список постов с пагинацией.
     pub async fn list_posts(
         &self,
         limit: i32,
@@ -250,6 +269,8 @@ impl BlogClient {
             }
         }
     }
+
+    /// Получает пост по его идентификатору.
     pub async fn get_post(
         &self,
         post_id: i64,

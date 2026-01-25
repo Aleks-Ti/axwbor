@@ -1,3 +1,5 @@
+//! Blog WASM Models
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
@@ -7,6 +9,7 @@ pub struct RegisterRequest {
     pub password: String,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct RegisterResponse {
     pub email: String,

@@ -16,14 +16,17 @@ impl<R> AuthService<R>
 where
     R: UserRepository + 'static,
 {
+    /// Создаёт новый экземпляр AuthService.
     pub fn new(repo: Arc<R>, keys: JwtKeys) -> Self {
         Self { repo, keys }
     }
 
+    /// Получение JWT ключей.
     pub fn keys(&self) -> &JwtKeys {
         &self.keys
     }
 
+    /// Получение пользователя по ID.
     pub async fn get_user(&self, id: i64) -> Result<User, AuthError> {
         self.repo
             .find_by_id(id)
@@ -31,6 +34,7 @@ where
             .ok_or(AuthError::UserNotFound(format!("user {}", id)))
     }
 
+    /// Регистрация нового пользователя.
     #[instrument(skip(self))]
     pub async fn register(
         &self,
@@ -40,9 +44,10 @@ where
     ) -> Result<User, AuthError> {
         let hash = hash_password(&password).map_err(|err| AuthError::Internal(err.to_string()))?;
         let user = NewUser::new(email.to_lowercase(), username.to_lowercase(), hash);
-        self.repo.create(user).await.map_err(AuthError::from)
+        self.repo.create(user).await
     }
 
+    /// Вход пользователя и генерация JWT токена.
     #[instrument(skip(self))]
     pub async fn login(&self, username: &str, password: &str) -> Result<String, AuthError> {
         let user = self

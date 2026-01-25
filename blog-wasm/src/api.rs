@@ -1,5 +1,7 @@
+//! Blog WASM API Module
+
 use crate::models::*;
-use dioxus::logger::tracing::{info};
+use dioxus::logger::tracing::info;
 use gloo_net::http::Request;
 const API: &str = "http://localhost:8080/api";
 

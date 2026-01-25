@@ -1,3 +1,5 @@
+//! Blog WASM Authentication Module
+
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde::Deserialize;
 use web_sys::window;

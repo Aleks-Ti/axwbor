@@ -1,5 +1,6 @@
 use serde::Deserialize;
 
+/// Структура, содержащая конфигурацию приложения.
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
     pub host: String,
@@ -12,6 +13,7 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
+    /// Загружает конфигурацию приложения из переменных окружения.
     pub fn from_env() -> anyhow::Result<Self> {
         dotenvy::dotenv().ok();
 
@@ -22,8 +24,8 @@ impl AppConfig {
             .map_err(|e| anyhow::anyhow!("invalid PORT: {}", e))?;
         let database_url = std::env::var("DATABASE_URL")
             .map_err(|_| anyhow::anyhow!("DATABASE_URL must be set"))?;
-        let jwt_secret = std::env::var("JWT_SECRET")
-            .map_err(|_| anyhow::anyhow!("JWT_SECRET must be set"))?;
+        let jwt_secret =
+            std::env::var("JWT_SECRET").map_err(|_| anyhow::anyhow!("JWT_SECRET must be set"))?;
         let cors_origins = std::env::var("CORS_ORIGINS")
             .unwrap_or_else(|_| "*".into())
             .split(',')
@@ -45,4 +47,3 @@ impl AppConfig {
         })
     }
 }
-

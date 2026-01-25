@@ -1,7 +1,17 @@
+#![warn(missing_docs)]
+
+//! Блог-сервер, реализующий HTTP и gRPC API для управления пользователями и постами в блоге.
+///! Основные компоненты:
+///! - Аутентификация и авторизация с использованием JWT.
+///! - Управление пользователями и постами.
+///! - Поддержка CORS и middleware для логирования и измерения времени обработки запрос
+
+/// - gRPC и HTTP интерфейсы для взаимодействия с клиентами.
 pub mod grpc_blog {
     tonic::include_proto!("blog");
 }
 
+/// gRPC-модуль для аутентификации.
 pub mod grpc_auth {
     tonic::include_proto!("auth");
 }
@@ -99,10 +109,12 @@ async fn main() -> std::io::Result<()> {
     let grpc_handle = tokio::spawn(async move {
         let post_grpc_impl =
             presentation::grpc::PostGrpcService::new(grpc_post_service, auth_service);
-        let post_tonic_svc = crate::grpc_blog::post_service_server::PostServiceServer::new(post_grpc_impl);
+        let post_tonic_svc =
+            crate::grpc_blog::post_service_server::PostServiceServer::new(post_grpc_impl);
 
         let auth_grpc_impl = presentation::grpc::AuthGrpcService::new(grpc_auth_service);
-        let auth_tonic_svc = crate::grpc_auth::auth_service_server::AuthServiceServer::new(auth_grpc_impl);
+        let auth_tonic_svc =
+            crate::grpc_auth::auth_service_server::AuthServiceServer::new(auth_grpc_impl);
         tonic::transport::Server::builder()
             .add_service(post_tonic_svc)
             .add_service(auth_tonic_svc)

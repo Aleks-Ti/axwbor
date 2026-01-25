@@ -1,3 +1,5 @@
+//! Blog Client gRPC Module
+
 use crate::error::BlogClientError;
 use crate::{grpc_auth, grpc_blog};
 use tonic::metadata::{MetadataMap, MetadataValue};
@@ -6,12 +8,14 @@ use tonic::transport::Channel;
 use crate::grpc_auth::auth_service_client::AuthServiceClient;
 use crate::grpc_blog::post_service_client::PostServiceClient;
 
+/// gRPC клиент для взаимодействия с блог-сервером.
 pub struct GrpcClient {
     auth_client: AuthServiceClient<Channel>,
     blog_client: PostServiceClient<Channel>,
 }
 
 impl GrpcClient {
+    /// Создаёт новый экземпляр GrpcClient с заданным каналом.
     pub fn new(channel: Channel) -> Self {
         Self {
             auth_client: AuthServiceClient::new(channel.clone()),
@@ -19,6 +23,7 @@ impl GrpcClient {
         }
     }
 
+    /// Выполняет вход пользователя и возвращает ответ gRPC.
     pub async fn login(
         &self,
         username: String,
@@ -30,6 +35,7 @@ impl GrpcClient {
         Ok(response)
     }
 
+    /// Регистрирует нового пользователя и возвращает ответ gRPC.
     pub async fn register(
         &self,
         username: String,
@@ -46,6 +52,7 @@ impl GrpcClient {
         Ok(response)
     }
 
+    /// Получает список постов с заданными лимитом и смещением.
     pub async fn get_posts(
         &self,
         limit: i32,
@@ -56,6 +63,8 @@ impl GrpcClient {
         let response = client.get_posts(request).await?.into_inner();
         Ok(response)
     }
+
+    /// Получает пост по его идентификатору.
     pub async fn get_post(
         &self,
         post_id: i64,
@@ -66,6 +75,7 @@ impl GrpcClient {
         Ok(response)
     }
 
+    /// Создаёт новый пост с заданным заголовком и содержимым.
     pub async fn create_post(
         &self,
         title: String,
@@ -85,6 +95,8 @@ impl GrpcClient {
         let response = client.create_post(request).await?.into_inner();
         Ok(response)
     }
+
+    /// Обновляет пост с заданным идентификатором, заголовком и содержимым.
     pub async fn update_post(
         &self,
         post_id: i64,
@@ -109,6 +121,8 @@ impl GrpcClient {
         let response = client.update_post(request).await?.into_inner();
         Ok(response)
     }
+
+    /// Удаляет пост с заданным идентификатором.
     pub async fn delete_post(
         &self,
         post_id: i64,

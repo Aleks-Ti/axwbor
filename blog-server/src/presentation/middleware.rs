@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::future::{ready, Ready};
+use std::future::{Ready, ready};
 use std::rc::Rc;
 use std::task::{Context, Poll};
 use std::time::Instant;
@@ -7,7 +7,7 @@ use std::time::Instant;
 use actix_service::{Service, Transform};
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{web, Error, HttpMessage};
+use actix_web::{Error, HttpMessage, web};
 use futures_util::future::LocalBoxFuture;
 use tracing::info;
 use uuid::Uuid;
@@ -66,19 +66,16 @@ where
             .map(|s| s.to_owned())
             .unwrap_or_else(|| Uuid::new_v4().to_string());
 
-        req.extensions_mut()
-            .insert(RequestId(request_id.clone()));
+        req.extensions_mut().insert(RequestId(request_id.clone()));
 
         let fut = self.service.call(req);
 
         Box::pin(async move {
             let mut res = fut.await?;
-            res.response_mut()
-                .headers_mut()
-                .insert(
-                    REQUEST_ID_HEADER.clone(),
-                    HeaderValue::from_str(&request_id).unwrap(),
-                );
+            res.response_mut().headers_mut().insert(
+                REQUEST_ID_HEADER.clone(),
+                HeaderValue::from_str(&request_id).unwrap(),
+            );
             Ok(res)
         })
     }
@@ -226,11 +223,12 @@ where
             let auth_service = auth_service
                 .ok_or_else(|| actix_web::error::ErrorInternalServerError("AuthService missing"))?;
 
-            let header = auth_header
-                .ok_or_else(|| actix_web::error::ErrorUnauthorized("missing authorization header"))?;
-            let token = header
-                .strip_prefix("Bearer ")
-                .ok_or_else(|| actix_web::error::ErrorUnauthorized("invalid authorization header"))?;
+            let header = auth_header.ok_or_else(|| {
+                actix_web::error::ErrorUnauthorized("missing authorization header")
+            })?;
+            let token = header.strip_prefix("Bearer ").ok_or_else(|| {
+                actix_web::error::ErrorUnauthorized("invalid authorization header")
+            })?;
 
             let user = extract_user_from_token(token, &keys, auth_service.get_ref()).await?;
 
@@ -244,4 +242,3 @@ where
         })
     }
 }
-

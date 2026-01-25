@@ -1,3 +1,5 @@
+//! Blog WASM Application
+
 use crate::models::Post;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::Level;
@@ -263,13 +265,14 @@ fn EditPost(token: Signal<Option<String>>, view: Signal<View>, post_id: i64) -> 
         if let Some(token_val) = token() {
             let _ = token_val.clone();
             spawn(async move {
-                if let Ok(posts) = api::load_posts(100, 0).await {
-                    if let Some(post) = posts.into_iter().find(|p| p.id == post_id) {
-                        title.set(post.title.clone());
-                        content.set(post.content.clone());
-                        original_post.set(Some(post));
-                    }
+                if let Ok(posts) = api::load_posts(100, 0).await
+                    && let Some(post) = posts.into_iter().find(|p| p.id == post_id)
+                {
+                    title.set(post.title.clone());
+                    content.set(post.content.clone());
+                    original_post.set(Some(post));
                 }
+
                 loading.set(false);
             });
         }

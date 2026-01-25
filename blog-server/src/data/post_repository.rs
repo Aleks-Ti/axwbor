@@ -9,7 +9,12 @@ pub trait PostRepository: Send + Sync {
     async fn create(&self, post: NewPost) -> Result<Post, PostError>;
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, PostError>;
     async fn find_all(&self, limit: i32, offset: i32) -> Result<Option<Vec<Post>>, PostError>;
-    async fn update(&self, id: i64, title: Option<String>, content: Option<String>) -> Result<Option<Post>, PostError>;
+    async fn update(
+        &self,
+        id: i64,
+        title: Option<String>,
+        content: Option<String>,
+    ) -> Result<Option<Post>, PostError>;
     async fn delete(&self, id: i64) -> Result<Option<Post>, PostError>;
 }
 
@@ -124,7 +129,12 @@ impl PostRepository for PostgresPostRepository {
         Ok(Some(posts))
     }
 
-    async fn update(&self, id: i64, title: Option<String>, content: Option<String>) -> Result<Option<Post>, PostError> {
+    async fn update(
+        &self,
+        id: i64,
+        title: Option<String>,
+        content: Option<String>,
+    ) -> Result<Option<Post>, PostError> {
         let row = sqlx::query(
             r#"
             UPDATE posts

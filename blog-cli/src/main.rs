@@ -1,9 +1,12 @@
+//! Blog CLI Utility
+
 use blog_client::{BlogClient, BlogClientError, Transport};
 use clap::{Parser, Subcommand};
 
 const TOKEN_FILE_NAME: &str = ".blog_cli_token";
 
 /// Возвращает путь к файлу токена: ~/.blog_cli_token
+#[allow(clippy::result_large_err)]
 fn get_token_path() -> Result<std::path::PathBuf, BlogClientError> {
     let home_dir = dirs::home_dir()
         .ok_or_else(|| {
@@ -97,6 +100,7 @@ enum Commands {
 }
 
 #[tokio::main]
+#[allow(clippy::result_large_err)]
 async fn main() -> Result<(), BlogClientError> {
     let cli = Cli::parse();
     let mut client = BlogClient::new(Transport::http_default()).await?;

@@ -28,6 +28,7 @@ where
     R: PostRepository + 'static,
     U: UserRepository + 'static,
 {
+    // Создаёт новый экземпляр PostGrpcService
     pub fn new(post_service: Arc<PostService<R>>, auth_service: Arc<AuthService<U>>) -> Self {
         Self {
             post_service,

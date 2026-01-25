@@ -3,6 +3,7 @@ use serde::Serialize;
 use serde_json::json;
 use thiserror::Error;
 
+/// Общая ошибка домена.
 #[derive(Debug, Error)]
 #[allow(dead_code)]
 pub enum DomainError {
@@ -20,6 +21,7 @@ pub enum DomainError {
     Unauthorized,
 }
 
+/// Ошибки аутентификации и авторизации.
 #[derive(Debug, Error)]
 pub enum AuthError {
     #[error("validation error: {0}")]
@@ -86,6 +88,7 @@ impl From<DomainError> for AuthError {
     }
 }
 
+/// Ошибки, связанные с операциями над постами.
 #[derive(Debug, Error)]
 pub enum PostError {
     #[error("validation error: {0}")]

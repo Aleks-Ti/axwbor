@@ -12,11 +12,12 @@ pub struct PostService<R: PostRepository + 'static> {
 impl<R> PostService<R>
 where
     R: PostRepository + 'static,
-{
+{   /// Создаёт новый экземпляр PostService.
     pub fn new(repo: Arc<R>) -> Self {
         Self { repo }
     }
 
+    /// Создание нового поста.
     pub async fn create_post(
         &self,
         title: String,
@@ -24,9 +25,10 @@ where
         author_id: i64,
     ) -> Result<Post, PostError> {
         let post = NewPost::new(title, content, author_id);
-        self.repo.create(post).await.map_err(PostError::from)
+        self.repo.create(post).await
     }
 
+    /// Получение списка постов с пагинацией.
     pub async fn get_posts(&self, limit: i32, offset: i32) -> Result<Vec<Post>, PostError> {
         self.repo
             .find_all(limit, offset)
@@ -34,6 +36,7 @@ where
             .ok_or_else(|| PostError::PostNotFound("posts not found".into()))
     }
 
+    /// Получение поста по ID.
     pub async fn get_post(&self, id: i64) -> Result<Post, PostError> {
         self.repo
             .find_by_id(id)
@@ -41,6 +44,7 @@ where
             .ok_or_else(|| PostError::PostNotFound(format!("post {} not found", id)))
     }
 
+    /// Обновление поста.
     pub async fn update_post(
         &self,
         id: i64,
@@ -61,6 +65,7 @@ where
             .ok_or_else(|| PostError::PostNotFound(format!("post {} not found", id)))
     }
 
+    /// Удаление поста.
     pub async fn delete_post(&self, id: i64, current_user_id: i64) -> Result<(), PostError> {
         let post = self.repo.find_by_id(id).await?;
         if post.is_none() {
