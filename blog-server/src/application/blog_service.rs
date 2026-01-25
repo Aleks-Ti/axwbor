@@ -4,6 +4,7 @@ use crate::data::post_repository::PostRepository;
 use crate::domain::post::NewPost;
 use crate::domain::{error::PostError, post::Post};
 
+/// Сервис для управления постами в блоге.
 #[derive(Clone)]
 pub struct PostService<R: PostRepository + 'static> {
     repo: Arc<R>,
@@ -12,7 +13,8 @@ pub struct PostService<R: PostRepository + 'static> {
 impl<R> PostService<R>
 where
     R: PostRepository + 'static,
-{   /// Создаёт новый экземпляр PostService.
+{
+    /// Создаёт новый экземпляр PostService.
     pub fn new(repo: Arc<R>) -> Self {
         Self { repo }
     }

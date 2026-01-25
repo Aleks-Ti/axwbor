@@ -5,7 +5,6 @@ use thiserror::Error;
 /// Ошибки, которые могут возникнуть в клиенте блога.
 #[derive(Error, Debug)]
 pub enum BlogClientError {
-
     /// Ошибка HTTP-запроса.
     #[error("HTTP request failed: {0}")]
     Http(#[from] reqwest::Error),

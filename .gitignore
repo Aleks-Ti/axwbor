@@ -24,3 +24,8 @@ target
 # Added by cargo
 
 /target
+
+.env
+.sqlx/
+dist/
+pkg/
