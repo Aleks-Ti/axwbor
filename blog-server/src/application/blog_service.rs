@@ -24,23 +24,20 @@ where
         author_id: i64,
     ) -> Result<Post, PostError> {
         let post = NewPost::new(title, content, author_id);
-        let new_post = self.repo.create(post).await.map_err(PostError::from);
-        new_post
+        self.repo.create(post).await.map_err(PostError::from)
     }
 
     pub async fn get_posts(&self, limit: i32, offset: i32) -> Result<Vec<Post>, PostError> {
         self.repo
             .find_all(limit, offset)
-            .await
-            .map_err(PostError::from)?
+            .await?
             .ok_or_else(|| PostError::PostNotFound("posts not found".into()))
     }
 
     pub async fn get_post(&self, id: i64) -> Result<Post, PostError> {
         self.repo
             .find_by_id(id)
-            .await
-            .map_err(PostError::from)?
+            .await?
             .ok_or_else(|| PostError::PostNotFound(format!("post {} not found", id)))
     }
 
@@ -51,7 +48,7 @@ where
         content: Option<String>,
         current_user_id: i64,
     ) -> Result<Post, PostError> {
-        let post = self.repo.find_by_id(id).await.map_err(PostError::from)?;
+        let post = self.repo.find_by_id(id).await?;
         if post.is_none() {
             return Err(PostError::PostNotFound(format!("post {} not found", id)));
         }
@@ -60,20 +57,19 @@ where
         }
         self.repo
             .update(id, title, content)
-            .await
-            .map_err(PostError::from)?
+            .await?
             .ok_or_else(|| PostError::PostNotFound(format!("post {} not found", id)))
     }
 
     pub async fn delete_post(&self, id: i64, current_user_id: i64) -> Result<(), PostError> {
-        let post = self.repo.find_by_id(id).await.map_err(PostError::from)?;
+        let post = self.repo.find_by_id(id).await?;
         if post.is_none() {
             return Err(PostError::PostNotFound(format!("post {} not found", id)));
         }
         if post.unwrap().author_id != current_user_id {
             return Err(PostError::Forbidden);
         }
-        let _ = self.repo.delete(id).await.map_err(PostError::from);
+        self.repo.delete(id).await?;
         Ok(())
     }
 }

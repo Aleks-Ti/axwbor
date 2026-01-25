@@ -44,7 +44,7 @@ pub async fn create_post(token: &str, title: String, content: String) -> anyhow:
         .json()
         .await?;
 
-    Ok(serde_json::from_value(res["post"].clone())?)
+    Ok(serde_json::from_value(res)?)
 }
 
 pub async fn update_post(
@@ -63,8 +63,7 @@ pub async fn update_post(
         .await?
         .json()
         .await?;
-
-    Ok(serde_json::from_value(res["post"].clone())?)
+    Ok(serde_json::from_value(res)?)
 }
 
 pub async fn delete_post(token: &str, id: i64) -> anyhow::Result<()> {

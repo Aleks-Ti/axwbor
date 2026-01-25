@@ -21,7 +21,7 @@ enum View {
 
 #[component]
 fn App() -> Element {
-    let token = use_signal(|| auth::load_token());
+    let token = use_signal(auth::load_token);
     let view = use_signal(|| View::List);
 
     rsx! {
@@ -66,13 +66,13 @@ fn RegisterForm(view: Signal<View>) -> Element {
         button {
             onclick: move |_| {
                 error.set(String::new());
-                let u = username(); let e = email(); let p = password();
-                if u.trim().is_empty() || e.trim().is_empty() || p.trim().is_empty() {
+                let usrn = username(); let em = email(); let ps = password();
+                if usrn.trim().is_empty() || em.trim().is_empty() || ps.trim().is_empty() {
                     error.set("All fields are required".to_string());
                     return;
                 }
                 spawn(async move {
-                    if let Err(_) = api::register(models::RegisterRequest { username: u, email: e, password: p }).await {
+                    if api::register(models::RegisterRequest { username: usrn, email: em, password: ps }).await.is_err() {
                         error.set("Registration failed".to_string());
                     } else {
                         view.set(View::List);
@@ -189,6 +189,7 @@ fn PostsPage(token: Signal<Option<String>>, view: Signal<View>) -> Element {
 
                                     spawn(async move {
                                         let _ = api::delete_post(&token_val, post.id).await;
+                                        posts.with_mut(|list| list.retain(|p| p.id != post.id));
                                         view.set(View::List);
                                     });
                                 }
@@ -236,7 +237,7 @@ fn CreatePost(token: Signal<Option<String>>, view: Signal<View>) -> Element {
                 if let Some(token_val) = token() {
                     let token_clone = token_val.clone();
                     spawn(async move {
-                        if let Ok(_) = api::create_post(&token_clone, t, c).await {
+                        if api::create_post(&token_clone, t, c).await.is_ok() {
                             view.set(View::List);
                         } else {
                             error.set("Failed to create post".to_string());
@@ -258,13 +259,10 @@ fn EditPost(token: Signal<Option<String>>, view: Signal<View>, post_id: i64) -> 
     let mut original_post = use_signal(|| None::<Post>);
     let mut loading = use_signal(|| true);
 
-    // Загружаем пост при монтировании
     use_effect(move || {
         if let Some(token_val) = token() {
             let _ = token_val.clone();
             spawn(async move {
-                // Для простоты: перезагрузим все посты и найдём нужный
-                // В реальности лучше сделать get_post_by_id
                 if let Ok(posts) = api::load_posts(100, 0).await {
                     if let Some(post) = posts.into_iter().find(|p| p.id == post_id) {
                         title.set(post.title.clone());
@@ -305,7 +303,7 @@ fn EditPost(token: Signal<Option<String>>, view: Signal<View>, post_id: i64) -> 
                     if let Some(token_val) = token() {
                         let token_clone = token_val.clone();
                         spawn(async move {
-                            if let Ok(_) = api::update_post(&token_clone, post_id, Some(t), Some(c)).await {
+                            if api::update_post(&token_clone, post_id, Some(t), Some(c)).await.is_ok() {
                                 view.set(View::List);
                             } else {
                                 error.set("Failed to update post".to_string());

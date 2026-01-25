@@ -34,10 +34,10 @@ impl PostRepository for PostgresPostRepository {
             RETURNING id, title, content, author_id, created_at
             "#,
         )
-        .bind(&post.title)
-        .bind(&post.content)
-        .bind(&post.author_id)
-        .bind(&post.created_at)
+        .bind(post.title)
+        .bind(post.content)
+        .bind(post.author_id)
+        .bind(post.created_at)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| {
@@ -102,8 +102,8 @@ impl PostRepository for PostgresPostRepository {
             LIMIT $1 OFFSET $2
             "#,
         )
-        .bind(&limit)
-        .bind(&offset)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| {

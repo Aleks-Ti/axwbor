@@ -27,9 +27,8 @@ where
     pub async fn get_user(&self, id: i64) -> Result<User, AuthError> {
         self.repo
             .find_by_id(id)
-            .await
-            .map_err(AuthError::from)?
-            .ok_or_else(|| AuthError::UserNotFound(format!("user {}", id)))
+            .await?
+            .ok_or(AuthError::UserNotFound(format!("user {}", id)))
     }
 
     #[instrument(skip(self))]
@@ -49,9 +48,8 @@ where
         let user = self
             .repo
             .find_by_username(&username.to_lowercase())
-            .await
-            .map_err(AuthError::from)?
-            .ok_or_else(|| DomainError::Unauthorized)?;
+            .await?
+            .ok_or(DomainError::Unauthorized)?;
         let valid = verify_password(password, &user.password_hash)
             .map_err(|_| DomainError::Unauthorized)?;
         if !valid {

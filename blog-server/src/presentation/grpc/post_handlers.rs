@@ -45,7 +45,7 @@ where
             .and_then(|s| s.strip_prefix("Bearer "))
             .ok_or_else(|| Status::unauthenticated("authorization required"))?;
 
-        let identity = extract_identity_from_token(auth_header, &self.auth_service.keys())
+        let identity = extract_identity_from_token(auth_header, self.auth_service.keys())
             .map_err(|_| Status::unauthenticated("invalid token"))?;
 
         Ok(identity)

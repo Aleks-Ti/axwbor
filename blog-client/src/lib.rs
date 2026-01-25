@@ -55,7 +55,7 @@ impl BlogClient {
             Transport::Http(_) => None,
             Transport::Grpc(addr) => {
                 let channel = tonic::transport::Endpoint::from_shared(addr.clone())
-                    .map_err(|e| BlogClientError::GrpcTransport(e.into()))?
+                    .map_err(|e| BlogClientError::GrpcTransport(e))?
                     .connect()
                     .await?;
                 Some(Arc::new(crate::grpc_client::GrpcClient::new(channel)))
