@@ -1,6 +1,6 @@
 use crate::models::Post;
-use dioxus::logger::tracing::{Level, info};
 use dioxus::prelude::*;
+use dioxus_logger::tracing::Level;
 mod api;
 mod auth;
 mod models;
@@ -12,15 +12,14 @@ fn main() {
 
 #[derive(Clone, Copy, PartialEq)]
 enum View {
+    List,
     Login,
     Register,
-    List, // всегда можно
     Create,
-    Update,
-    Get,
-    Delete,
+    Edit(i64),
 }
 
+#[component]
 fn App() -> Element {
     let token = use_signal(|| auth::load_token());
     let view = use_signal(|| View::List);
@@ -28,50 +27,61 @@ fn App() -> Element {
     rsx! {
         h1 { "Blog" }
 
+        // Статус аутентификации
+        p {
+            if let Some(_) = token() {
+                "Status: Logged in"
+            } else {
+                "Status: Not logged in"
+            }
+        }
+
         match view() {
-        View::List => rsx!(PostsPage{token, view}),
-        View::Login => rsx!(LoginForm{token, view}),
-        View::Register => rsx!(RegisterForm{view}),
-        View::Create => rsx!(RegisterForm{view}),
-        View::Update => rsx!(RegisterForm{view}),
-        View::Get => rsx!(RegisterForm{view}),
-        View::Delete => rsx!(RegisterForm{view}),
+            View::List => rsx!(PostsPage { token, view }),
+            View::Login => rsx!(LoginForm { token, view }),
+            View::Register => rsx!(RegisterForm { view }),
+            View::Create => rsx!(CreatePost { token, view }),
+            View::Edit(id) => rsx!(EditPost { token, view, post_id: id }),
         }
     }
 }
+
+// ============ AUTH FORMS ============
 
 #[component]
 fn RegisterForm(view: Signal<View>) -> Element {
     let mut username = use_signal(String::new);
     let mut email = use_signal(String::new);
     let mut password = use_signal(String::new);
+    let mut error = use_signal(String::new);
 
     rsx! {
         h2 { "Register" }
-        input { placeholder: "username", oninput: move |e| username.set(e.value()) }
-        input { placeholder: "email", oninput: move |e| email.set(e.value()) }
-        input { r#type: "password", placeholder: "password", oninput: move |e| password.set(e.value()) }
+        if !error().is_empty() { p { color: "red", "{error}" } }
+
+        input { placeholder: "Username", value: "{username}", oninput: move |e| username.set(e.value()) }
+        input { placeholder: "Email", value: "{email}", oninput: move |e| email.set(e.value()) }
+        input { r#type: "password", placeholder: "Password", value: "{password}", oninput: move |e| password.set(e.value()) }
 
         button {
             onclick: move |_| {
+                error.set(String::new());
+                let u = username(); let e = email(); let p = password();
+                if u.trim().is_empty() || e.trim().is_empty() || p.trim().is_empty() {
+                    error.set("All fields are required".to_string());
+                    return;
+                }
                 spawn(async move {
-                    let _ = crate::api::register(
-                        crate::models::RegisterRequest {
-                            username: username(),
-                            email: email(),
-                            password: password(),
-                        }
-                    ).await;
-                    view.set(View::List);
+                    if let Err(_) = api::register(models::RegisterRequest { username: u, email: e, password: p }).await {
+                        error.set("Registration failed".to_string());
+                    } else {
+                        view.set(View::List);
+                    }
                 });
             },
-            "Create account"
+            "Register"
         }
-
-        button {
-            onclick: move |_| view.set(View::List),
-            "Cancel"
-        }
+        button { onclick: move |_| view.set(View::List), "Cancel" }
     }
 }
 
@@ -79,110 +89,69 @@ fn RegisterForm(view: Signal<View>) -> Element {
 fn LoginForm(token: Signal<Option<String>>, view: Signal<View>) -> Element {
     let mut username = use_signal(String::new);
     let mut password = use_signal(String::new);
+    let mut error = use_signal(String::new);
 
     rsx! {
         h2 { "Login" }
+        if !error().is_empty() { p { color: "red", "{error}" } }
 
-        input {
-            placeholder: "username",
-            oninput: move |e| username.set(e.value())
-        }
-        input {
-            r#type: "password",
-            placeholder: "password",
-            oninput: move |e| password.set(e.value())
-        }
+        input { placeholder: "Username", value: "{username}", oninput: move |e| username.set(e.value()) }
+        input { r#type: "password", placeholder: "Password", value: "{password}", oninput: move |e| password.set(e.value()) }
 
         button {
             onclick: move |_| {
+                error.set(String::new());
+                let u = username(); let p = password();
+                if u.trim().is_empty() || p.trim().is_empty() {
+                    error.set("Username and password required".to_string());
+                    return;
+                }
                 spawn(async move {
-                    if let Ok(res) = api::login(
-                        models::LoginRequest {
-                            username: username(),
-                            password: password(),
+                    match api::login(models::LoginRequest { username: u, password: p }).await {
+                        Ok(res) => {
+                            auth::save_token(&res.access_token);
+                            token.set(Some(res.access_token));
+                            view.set(View::List);
                         }
-                    ).await {
-                        auth::save_token(&res.access_token);
-                        token.set(Some(res.access_token));
-                        view.set(View::List);
+                        Err(_) => {
+                            error.set("Login failed".to_string());
+                        }
                     }
                 });
             },
             "Login"
         }
-
-        button {
-            onclick: move |_| view.set(View::List),
-            "Cancel"
-        }
+        button { onclick: move |_| view.set(View::List), "Cancel" }
     }
 }
 
-#[component]
-fn CreatePost(token: Signal<Option<String>>, posts: Signal<Vec<Post>>) -> Element {
-    let mut title = use_signal(String::new);
-    let mut content = use_signal(String::new);
-
-    rsx! {
-        h3 { "Create post" }
-
-        input {
-            placeholder: "title",
-            oninput: move |e| title.set(e.value())
-        }
-        textarea {
-            placeholder: "content",
-            oninput: move |e| content.set(e.value())
-        }
-
-        button {
-            onclick: move |_| {
-                if let Some(token) = token() {
-                    spawn(async move {
-                        if let Ok(post) =
-                            api::create_post(&token, title(), content()).await
-                        {
-                            posts.push(post);
-                        }
-                    });
-                }
-            },
-            "Create post"
-        }
-    }
-}
+// ============ POSTS PAGE ============
 
 #[component]
 fn PostsPage(token: Signal<Option<String>>, view: Signal<View>) -> Element {
-    let posts = use_signal(Vec::<models::Post>::new);
+    let mut posts = use_signal(Vec::<Post>::new);
+    let mut loading = use_signal(|| true);
 
+    let user_id = auth::get_user_id();
+
+    // загрузка данных
     use_effect(move || {
-        println!("Fetching posts...");
-        let posts = posts.clone();
+        loading.set(true);
         spawn(async move {
-            match api::load_posts(20, 0).await {
-                Ok(data) => {
-                    println!("Got {} posts", data.len());
-                    // запись должна быть вне await‑цепочки
-                    posts.clone().set(data);
-                }
-                Err(e) => {
-                    println!("Error loading posts: {:?}", e);
-                }
+            if let Ok(data) = api::load_posts(100, 0).await {
+                posts.set(data);
             }
+            loading.set(false);
         });
     });
 
+    let posts_snapshot: Vec<Post> = posts().clone();
+
     rsx! {
+        // ===== Auth =====
         if token().is_none() {
-            button {
-                onclick: move |_| view.set(View::Login),
-                "Login"
-            }
-            button {
-                onclick: move |_| view.set(View::Register),
-                "Register"
-            }
+            button { onclick: move |_| view.set(View::Login), "Login" }
+            button { onclick: move |_| view.set(View::Register), "Register" }
         } else {
             button {
                 onclick: move |_| {
@@ -191,22 +160,162 @@ fn PostsPage(token: Signal<Option<String>>, view: Signal<View>) -> Element {
                 },
                 "Logout"
             }
-        }
-
-        // Создание поста — только если залогинен
-        if token().is_some() {
-            CreatePost { token: token.clone(), posts: posts.clone() }
+            button { onclick: move |_| view.set(View::Create), "Create Post" }
         }
 
         hr {}
 
-        // Список постов — всегда
-        for post in posts().iter() {
+        if loading() {
+            p { "Loading posts..." }
+        }
+
+        // ===== Posts =====
+        for post in posts_snapshot {
             div {
                 h3 { "{post.title}" }
-                small { "by {post.author_id} · {post.created_at}" }
                 p { "{post.content}" }
+
+                if let Some(uid) = user_id {
+                    if uid == post.author_id {
+                        button {
+                            onclick: move |_| view.set(View::Edit(post.id)),
+                            "Edit"
+                        }
+
+                        button {
+                            onclick: move |_| {
+                                if let Some(token_val) = token() {
+                                    let token_val = token_val.clone();
+
+                                    spawn(async move {
+                                        let _ = api::delete_post(&token_val, post.id).await;
+                                        view.set(View::List);
+                                    });
+                                }
+                            },
+                            "Delete"
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+
+// ============ CREATE / EDIT ============
+
+#[component]
+fn CreatePost(token: Signal<Option<String>>, view: Signal<View>) -> Element {
+    let mut title = use_signal(String::new);
+    let mut content = use_signal(String::new);
+    let mut error = use_signal(String::new);
+
+    rsx! {
+        h2 { "Create New Post" }
+        if !error().is_empty() { p { color: "red", "{error}" } }
+
+        input {
+            placeholder: "Title",
+            value: "{title}",
+            oninput: move |e| title.set(e.value())
+        }
+        textarea {
+            placeholder: "Content",
+            value: "{content}",
+            oninput: move |e| content.set(e.value())
+        }
+
+        button {
+            onclick: move |_| {
+                error.set(String::new());
+                let t = title(); let c = content();
+                if t.trim().is_empty() || c.trim().is_empty() {
+                    error.set("Title and content are required".to_string());
+                    return;
+                }
+                if let Some(token_val) = token() {
+                    let token_clone = token_val.clone();
+                    spawn(async move {
+                        if let Ok(_) = api::create_post(&token_clone, t, c).await {
+                            view.set(View::List);
+                        } else {
+                            error.set("Failed to create post".to_string());
+                        }
+                    });
+                }
+            },
+            "Publish"
+        }
+        button { onclick: move |_| view.set(View::List), "Cancel" }
+    }
+}
+
+#[component]
+fn EditPost(token: Signal<Option<String>>, view: Signal<View>, post_id: i64) -> Element {
+    let mut title = use_signal(String::new);
+    let mut content = use_signal(String::new);
+    let mut error = use_signal(String::new);
+    let mut original_post = use_signal(|| None::<Post>);
+    let mut loading = use_signal(|| true);
+
+    // Загружаем пост при монтировании
+    use_effect(move || {
+        if let Some(token_val) = token() {
+            let _ = token_val.clone();
+            spawn(async move {
+                // Для простоты: перезагрузим все посты и найдём нужный
+                // В реальности лучше сделать get_post_by_id
+                if let Ok(posts) = api::load_posts(100, 0).await {
+                    if let Some(post) = posts.into_iter().find(|p| p.id == post_id) {
+                        title.set(post.title.clone());
+                        content.set(post.content.clone());
+                        original_post.set(Some(post));
+                    }
+                }
+                loading.set(false);
+            });
+        }
+    });
+
+    rsx! {
+        if loading() { p { "Loading post..." } }
+        else {
+            h2 { "Edit Post" }
+            if !error().is_empty() { p { color: "red", "{error}" } }
+
+            input {
+                placeholder: "Title",
+                value: "{title}",
+                oninput: move |e| title.set(e.value())
+            }
+            textarea {
+                placeholder: "Content",
+                value: "{content}",
+                oninput: move |e| content.set(e.value())
+            }
+
+            button {
+                onclick: move |_| {
+                    error.set(String::new());
+                    let t = title(); let c = content();
+                    if t.trim().is_empty() || c.trim().is_empty() {
+                        error.set("Title and content are required".to_string());
+                        return;
+                    }
+                    if let Some(token_val) = token() {
+                        let token_clone = token_val.clone();
+                        spawn(async move {
+                            if let Ok(_) = api::update_post(&token_clone, post_id, Some(t), Some(c)).await {
+                                view.set(View::List);
+                            } else {
+                                error.set("Failed to update post".to_string());
+                            }
+                        });
+                    }
+                },
+                "Save"
+            }
+            button { onclick: move |_| view.set(View::List), "Cancel" }
         }
     }
 }

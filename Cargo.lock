@@ -615,14 +615,14 @@ dependencies = [
 name = "blog-wasm"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "base64 0.22.1",
  "dioxus",
+ "dioxus-logger",
  "gloo-net",
- "js-sys",
  "log",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
- "wasm-bindgen",
  "wasm-bindgen-console-logger",
  "web-sys",
 ]

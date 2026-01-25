@@ -32,8 +32,3 @@ pub struct Post {
     pub author_id: i64,
     pub created_at: String,
 }
-
-#[derive(Deserialize, Debug)]
-pub struct GetPostsResponse {
-    pub posts: Vec<Post>,
-}
